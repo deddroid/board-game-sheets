@@ -23,6 +23,11 @@ aprendo il file nel browser.
 - **Gestione giocatori**: aggiungi/rimuovi/rinomina, scelta di quale sei "tu" (colonna evidenziata).
 - **Le mie carte**: pannello con checklist per segnare la propria mano (✓ a me, ✗ agli altri).
 - **Carte personalizzabili**: rinomina/aggiungi/togli carte per edizione diversa; reset ai default.
+- **Edizioni (preset)**: icona 🃏 + chip con l'edizione attiva. Edizione predefinita "Classico" (EN/IT);
+  si possono salvare edizioni personalizzate dalle carte correnti, rinominarle, eliminarle e passare
+  dall'una all'altra (il cambio chiede conferma e azzera i segni, il blocco appunti resta).
+- **Istruzioni**: icona ❓ con una guida all'uso dell'app + consigli rapidi di gioco (EN/IT).
+- **UI**: header con logo e toolbar, colori per categoria (sospetti/armi/stanze), chip edizione.
 - **Blocco appunti** libero, sotto la griglia.
 - **Salvataggio locale** su `localStorage` (best-effort, con fallback in memoria dove lo storage è
   disabilitato — es. apertura come `data:` URL). Tutto resta solo sul dispositivo.
@@ -42,6 +47,10 @@ aprendo il file nel browser.
   classico, NON ispezionando l'app. Da identificare con l'utente (nome esatto/store) e catalogare le
   sue funzioni per colmare eventuali lacune (es. annotazioni per cella, registro delle ipotesi,
   deduzioni più avanzate, più partite salvate).
+- **Edizioni predefinite**: per ora c'è solo "Classico" (verificato). Non ho incluso edizioni
+  ufficiali espanse (es. Master Detective/Super Cluedo) per non spedire liste potenzialmente
+  inesatte e per prudenza sui marchi; l'utente può crearle da sé, oppure aggiungerle su richiesta
+  indicando le carte esatte. Da rivedere i nomi delle edizioni prima di un'eventuale pubblicazione.
 - Eventuale registro strutturato dei turni (chi ha chiesto cosa, chi ha mostrato) oltre al blocco
   appunti libero.
 - Note per singola cella / segni liberi dentro la cella.

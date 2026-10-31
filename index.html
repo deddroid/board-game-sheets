@@ -24,6 +24,9 @@
     --maybe-bg: #fdf3e2;
     --solved-bg: #fff8d6;
     --solved-line: #f1d472;
+    --cat-suspects: #4c6ef5;
+    --cat-weapons: #e8590c;
+    --cat-rooms: #0ca678;
     --radius: 10px;
     --tap: 44px;
   }
@@ -46,6 +49,9 @@
       --maybe-bg: #3a2c12;
       --solved-bg: #3a330f;
       --solved-line: #6d5e1b;
+      --cat-suspects: #748ffc;
+      --cat-weapons: #ff922b;
+      --cat-rooms: #38d9a9;
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -60,17 +66,30 @@
     position: sticky; top: 0; z-index: 40;
     background: var(--panel);
     border-bottom: 1px solid var(--line);
-    padding: 10px 12px; padding-top: calc(10px + env(safe-area-inset-top));
-    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top));
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   }
-  header h1 { font-size: 17px; margin: 0; font-weight: 650; flex: 1; letter-spacing: .2px; }
+  .brand { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
+  .brand .logo {
+    width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), #5c7cfa); color: #fff;
+    border-radius: 9px; font-size: 17px;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toolbar { display: flex; align-items: center; gap: 6px; flex: none; }
   header .spacer { flex: 1; }
   button {
     font: inherit; color: var(--ink); background: var(--panel);
     border: 1px solid var(--line-strong); border-radius: 8px;
     padding: 8px 12px; cursor: pointer; min-height: var(--tap);
   }
-  button.icon { min-width: var(--tap); padding: 8px; }
+  button.icon { min-width: 42px; min-height: 42px; padding: 8px; font-size: 17px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 999px; min-height: 40px;
+    border: 1px solid var(--line-strong); background: var(--panel); font-size: 14px;
+  }
+  .chip b { font-weight: 650; }
   button:active { transform: translateY(1px); }
   button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   button.ghost { background: transparent; border-color: var(--line); }
@@ -99,10 +118,15 @@
   }
   tr.section-row th {
     position: sticky; left: 0; z-index: 6;
-    background: var(--bg); color: var(--muted);
+    background: var(--bg); color: var(--cat, var(--muted));
     text-transform: uppercase; letter-spacing: .6px; font-size: 11px;
-    text-align: left; padding: 7px 8px; font-weight: 700;
+    text-align: left; padding: 7px 8px 7px 10px; font-weight: 800;
+    border-left: 4px solid var(--cat, var(--line));
   }
+  td.card-cell { border-left: 4px solid var(--cat, var(--line)); }
+  tr.cat-suspects { --cat: var(--cat-suspects); }
+  tr.cat-weapons { --cat: var(--cat-weapons); }
+  tr.cat-rooms { --cat: var(--cat-rooms); }
   th.player-head .pname { display: block; max-width: 72px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   th.player-head.me { background: var(--me); }
   td.mark { min-width: var(--tap); height: var(--tap); padding: 0; cursor: pointer; font-size: 20px; font-weight: 700; user-select: none; }
@@ -162,23 +186,56 @@
   .toggle-line input { width: 22px; height: 22px; }
   .danger { color: var(--no); border-color: var(--no); background: transparent; }
   .mini { font-size: 12px; color: var(--muted); }
-  details.menu { position: relative; }
+
+  /* Editions list */
+  .preset-list { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .preset-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel); cursor: pointer;
+  }
+  .preset-item.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .preset-item .pi-main { flex: 1; min-width: 0; }
+  .preset-item .pi-name { font-weight: 600; }
+  .preset-item .pi-sub { font-size: 12px; color: var(--muted); }
+  .preset-item .pi-badge { font-size: 11px; color: var(--accent); font-weight: 700; }
+  .preset-item .pi-btn { padding: 6px 8px; min-height: 36px; font-size: 13px; border-color: var(--line); background: transparent; }
+  .preset-item .pi-btn.del { color: var(--no); }
+
+  /* Help / instructions */
+  .help-body h3 { font-size: 14px; margin: 16px 0 6px; }
+  .help-body p { margin: 6px 0; color: var(--ink); font-size: 14px; }
+  .help-body ul { margin: 6px 0; padding-left: 20px; }
+  .help-body li { margin: 4px 0; font-size: 14px; }
+  .help-body .key {
+    display: inline-block; min-width: 20px; text-align: center; font-weight: 700;
+    border-radius: 5px; padding: 0 5px;
+  }
+  .help-body .key.yes { color: var(--yes); background: var(--yes-bg); }
+  .help-body .key.no { color: var(--no); background: var(--no-bg); }
+  .help-body .key.maybe { color: var(--maybe); background: var(--maybe-bg); }
 </style>
 </head>
 <body>
 <header>
-  <h1 id="app-title">Detective Notes</h1>
-  <div class="spacer"></div>
-  <div class="lang-toggle" id="lang-toggle">
-    <button data-lang="en">EN</button>
-    <button data-lang="it">IT</button>
+  <div class="brand">
+    <span class="logo">🔍</span>
+    <h1 id="app-title">Detective Notes</h1>
   </div>
-  <button class="icon" id="btn-players" title="Players">👥</button>
-  <button class="icon" id="btn-settings" title="Settings">⚙️</button>
+  <div class="toolbar">
+    <div class="lang-toggle" id="lang-toggle">
+      <button data-lang="en">EN</button>
+      <button data-lang="it">IT</button>
+    </div>
+    <button class="icon" id="btn-editions" title="Editions">🃏</button>
+    <button class="icon" id="btn-players" title="Players">👥</button>
+    <button class="icon" id="btn-help" title="How to use">❓</button>
+    <button class="icon" id="btn-settings" title="Settings">⚙️</button>
+  </div>
 </header>
 
 <main>
   <div class="row-actions" style="margin-top:0;margin-bottom:10px">
+    <button id="btn-edition-chip" class="chip" title="Editions">🃏 <b id="edition-name">Classic</b></button>
     <button id="btn-myhand" class="ghost" data-i18n="myHand">My cards</button>
     <div class="spacer"></div>
     <button id="btn-new" class="ghost" data-i18n="newGame">New game</button>
@@ -259,7 +316,44 @@ var I18N = {
     newGameTitle: "New game?",
     newGameHint: "This clears all marks and the notepad. Players and cards are kept.",
     clearMarks: "Clear marks & notes",
-    solution: "SOLUTION"
+    solution: "SOLUTION",
+    // editions
+    editionsTitle: "Editions",
+    editionsHint: "Each edition is a named set of suspects, weapons and rooms. Pick one to load it onto the sheet.",
+    builtin: "Built-in",
+    custom: "Custom",
+    cardsCount: "{s} suspects · {w} weapons · {r} rooms",
+    loadEdition: "Load",
+    saveAsEdition: "Save current cards as edition…",
+    editionNamePrompt: "Name for this edition:",
+    switchEditionTitle: "Switch edition?",
+    switchEditionHint: "Loading \"{name}\" replaces the cards and clears all marks. The notepad is kept.",
+    loadAndClear: "Load & clear marks",
+    rename: "Rename", remove: "Remove", active: "Active",
+    deleteEditionConfirm: "Delete this edition?",
+    // help
+    helpTitle: "How to use",
+    help: {
+      intro: "A digital version of the Cluedo detective sheet, plus a notepad. Everything stays on this device.",
+      gridH: "The grid",
+      grid1: "Rows are the suspects, weapons and rooms; columns are the players. Tap a cell to cycle its mark:",
+      mNo: "the player does NOT have this card",
+      mYes: "the player HAS this card",
+      mMaybe: "unsure / maybe",
+      grid2: "Tap again to clear it.",
+      deduceH: "Auto-deduction",
+      deduce1: "With auto-deduction on, marking a player ✓ for a card sets ✗ for everyone else automatically. A card ruled out (✗) for every player is highlighted as the SOLUTION — it must be in the envelope.",
+      handH: "Your cards",
+      hand1: "Open 👥 Players to set which player is you, then 🃏→ \"My cards\" to tick the cards in your hand. They are marked ✓ for you and ✗ for the others.",
+      editionsH: "Editions",
+      editions1: "Use 🃏 to switch between card sets (editions) or save your own. Handy if your box uses different suspects, weapons or rooms.",
+      notesH: "Notepad",
+      notes1: "Jot down who asked what, who showed a card, and your hunches. Saved automatically.",
+      tipH: "Quick tips for playing",
+      tip1: "Mark a ✗ whenever a player can't answer a suggestion for a card.",
+      tip2: "When a player shows a card you didn't see, note it in the notepad — later you may deduce which one it was.",
+      tip3: "When only one suspect, weapon or room is left unruled, that's your accusation."
+    }
   },
   it: {
     title: "Note dell'investigatore",
@@ -291,7 +385,44 @@ var I18N = {
     newGameTitle: "Nuova partita?",
     newGameHint: "Azzera tutti i segni e il blocco appunti. Giocatori e carte restano.",
     clearMarks: "Azzera segni e appunti",
-    solution: "SOLUZIONE"
+    solution: "SOLUZIONE",
+    // editions
+    editionsTitle: "Edizioni",
+    editionsHint: "Ogni edizione è un insieme di sospetti, armi e stanze con un nome. Scegline una per caricarla sul foglio.",
+    builtin: "Predefinita",
+    custom: "Personalizzata",
+    cardsCount: "{s} sospetti · {w} armi · {r} stanze",
+    loadEdition: "Carica",
+    saveAsEdition: "Salva le carte attuali come edizione…",
+    editionNamePrompt: "Nome di questa edizione:",
+    switchEditionTitle: "Cambiare edizione?",
+    switchEditionHint: "Caricare \"{name}\" sostituisce le carte e azzera tutti i segni. Il blocco appunti resta.",
+    loadAndClear: "Carica e azzera i segni",
+    rename: "Rinomina", remove: "Elimina", active: "Attiva",
+    deleteEditionConfirm: "Eliminare questa edizione?",
+    // help
+    helpTitle: "Istruzioni",
+    help: {
+      intro: "Una versione digitale del foglio investigazioni del Cluedo, più un blocco appunti. Tutto resta su questo dispositivo.",
+      gridH: "La griglia",
+      grid1: "Le righe sono sospetti, armi e stanze; le colonne sono i giocatori. Tocca una cella per cambiarne il segno:",
+      mNo: "il giocatore NON ha questa carta",
+      mYes: "il giocatore HA questa carta",
+      mMaybe: "incerto / forse",
+      grid2: "Tocca ancora per togliere il segno.",
+      deduceH: "Deduzione automatica",
+      deduce1: "Con la deduzione automatica attiva, segnare ✓ a un giocatore per una carta mette ✗ a tutti gli altri. Una carta esclusa (✗) a ogni giocatore viene evidenziata come SOLUZIONE: è nella busta.",
+      handH: "Le tue carte",
+      hand1: "Apri 👥 Giocatori per indicare qual è il tuo, poi 🃏→ \"Le mie carte\" per spuntare le carte che hai in mano. Vengono segnate ✓ per te e ✗ per gli altri.",
+      editionsH: "Edizioni",
+      editions1: "Usa 🃏 per passare da un insieme di carte (edizione) all'altro o salvare il tuo. Utile se la tua scatola ha sospetti, armi o stanze diverse.",
+      notesH: "Blocco appunti",
+      notes1: "Annota chi ha chiesto cosa, chi ha mostrato una carta e le tue intuizioni. Salvato in automatico.",
+      tipH: "Consigli rapidi per giocare",
+      tip1: "Metti una ✗ ogni volta che un giocatore non può rispondere a un'ipotesi per una carta.",
+      tip2: "Quando un giocatore mostra una carta che non vedi, annotala: più avanti potresti dedurre quale fosse.",
+      tip3: "Quando resta un solo sospetto, una sola arma o una sola stanza non esclusi, quella è la tua accusa."
+    }
   }
 };
 
@@ -310,6 +441,11 @@ var DEFAULT_CARDS = {
 
 var CATS = ["suspects", "weapons", "rooms"];
 
+/* Built-in editions. "cards" is per-language; user editions store a flat card set. */
+var BUILTIN_PRESETS = [
+  { id: "classic", builtin: true, name: { en: "Classic", it: "Classico" }, cards: DEFAULT_CARDS }
+];
+
 /* ---------- state ---------- */
 var state = null;
 var lang = lsGet(LANG_KEY) || (navigator.language && navigator.language.indexOf("it") === 0 ? "it" : "en");
@@ -317,6 +453,31 @@ if (lang !== "en" && lang !== "it") lang = "en";
 
 function uid(p) { return p + Math.random().toString(36).slice(2, 9); }
 function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
+function fmt(s, o) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return o[k] != null ? o[k] : ""; }); }
+
+/* ---------- editions (presets) ---------- */
+function presetName(p) { return typeof p.name === "string" ? p.name : (p.name[lang] || p.name.en); }
+function presetFlatCards(p) {
+  var c = p.cards;
+  if (c && c[lang] && c[lang].suspects) return c[lang];   // per-language built-in, current lang
+  if (c && c.en && c.en.suspects) return c.en;            // built-in fallback
+  return c;                                               // flat user edition
+}
+function allPresets() { return BUILTIN_PRESETS.concat(state.presets || []); }
+function activePreset() {
+  return allPresets().filter(function (p) { return p.id === state.activePresetId; })[0] || null;
+}
+function loadPresetCards(p) {
+  var flat = presetFlatCards(p);
+  var cats = {};
+  CATS.forEach(function (c) {
+    cats[c] = (flat[c] || []).map(function (name) { return { id: uid("c"), name: name }; });
+  });
+  state.cards = cats;
+  state.marks = {};
+  state.activePresetId = p.id;
+  save();
+}
 
 function defaultState() {
   var cats = {};
@@ -324,8 +485,10 @@ function defaultState() {
     cats[c] = DEFAULT_CARDS[lang][c].map(function (name) { return { id: uid("c"), name: name }; });
   });
   return {
-    version: 1,
+    version: 2,
     autoDeduce: true,
+    activePresetId: "classic",
+    presets: [],
     players: [
       { id: uid("p"), name: t("me") === "io" ? "Io" : "Me", isMe: true },
       { id: uid("p"), name: t("player") + " 2", isMe: false },
@@ -340,7 +503,14 @@ function defaultState() {
 function load() {
   var raw = lsGet(STORE_KEY);
   if (raw) {
-    try { state = JSON.parse(raw); if (state && state.players && state.cards) return; } catch (e) { /* corrupt */ }
+    try {
+      var s = JSON.parse(raw);
+      if (s && s.players && s.cards) {
+        if (!Array.isArray(s.presets)) s.presets = [];
+        if (!s.activePresetId) s.activePresetId = "classic";
+        state = s; return;
+      }
+    } catch (e) { /* corrupt — start fresh */ }
   }
   state = defaultState();
   save();
@@ -391,6 +561,8 @@ function render() {
     b.classList.toggle("on", b.getAttribute("data-lang") === lang);
   });
   document.getElementById("notes").value = state.notes || "";
+  var ap = activePreset();
+  document.getElementById("edition-name").textContent = ap ? presetName(ap) : t("custom");
 
   var tbl = document.getElementById("grid");
   tbl.innerHTML = "";
@@ -417,7 +589,7 @@ function render() {
   var tbody = document.createElement("tbody");
   CATS.forEach(function (cat) {
     var sr = document.createElement("tr");
-    sr.className = "section-row";
+    sr.className = "section-row cat-" + cat;
     var sth = document.createElement("th");
     sth.colSpan = state.players.length + 1;
     sth.textContent = t(cat);
@@ -427,7 +599,7 @@ function render() {
     (state.cards[cat] || []).forEach(function (card) {
       var tr = document.createElement("tr");
       var solved = isSolved(card.id);
-      if (solved) tr.className = "solved";
+      tr.className = "cat-" + cat + (solved ? " solved" : "");
       var cc = document.createElement("td");
       cc.className = "card-cell";
       cc.textContent = card.name;
@@ -659,6 +831,112 @@ function newGameModal() {
   });
 }
 
+/* ---------- editions modal ---------- */
+function editionsModal() {
+  openModal(function (m) {
+    m.innerHTML = "<h2>" + t("editionsTitle") + "</h2><p class='mini'>" + t("editionsHint") + "</p>";
+    var list = document.createElement("div"); list.className = "preset-list";
+
+    function confirmSwitch(p) {
+      if (p.id === state.activePresetId) { closeModal(); return; }
+      openModal(function (mm) {
+        mm.innerHTML = "<h2>" + t("switchEditionTitle") + "</h2><p class='mini'>" +
+          fmt(t("switchEditionHint"), { name: presetName(p) }) + "</p>";
+        var a = document.createElement("div"); a.className = "modal-actions";
+        var c = document.createElement("button"); c.className = "ghost"; c.textContent = t("cancel");
+        c.addEventListener("click", closeModal);
+        var ok = document.createElement("button"); ok.className = "primary"; ok.textContent = t("loadAndClear");
+        ok.addEventListener("click", function () { loadPresetCards(p); closeModal(); });
+        a.appendChild(c); a.appendChild(ok); mm.appendChild(a);
+      });
+    }
+
+    function draw() {
+      list.innerHTML = "";
+      allPresets().forEach(function (p) {
+        var flat = presetFlatCards(p) || {};
+        var item = document.createElement("div");
+        item.className = "preset-item" + (p.id === state.activePresetId ? " active" : "");
+        var main = document.createElement("div"); main.className = "pi-main"; main.style.cursor = "pointer";
+        var nm = document.createElement("div"); nm.className = "pi-name"; nm.textContent = presetName(p);
+        var sub = document.createElement("div"); sub.className = "pi-sub";
+        sub.textContent = (p.builtin ? t("builtin") : t("custom")) + " · " +
+          fmt(t("cardsCount"), { s: (flat.suspects || []).length, w: (flat.weapons || []).length, r: (flat.rooms || []).length });
+        main.appendChild(nm); main.appendChild(sub);
+        main.addEventListener("click", function () { confirmSwitch(p); });
+        item.appendChild(main);
+        if (p.id === state.activePresetId) {
+          var badge = document.createElement("span"); badge.className = "pi-badge"; badge.textContent = t("active");
+          item.appendChild(badge);
+        }
+        if (!p.builtin) {
+          var ren = document.createElement("button"); ren.className = "pi-btn"; ren.textContent = "✎"; ren.title = t("rename");
+          ren.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var nn = prompt(t("editionNamePrompt"), presetName(p));
+            if (nn && nn.trim()) { p.name = nn.trim(); save(); draw(); render(); }
+          });
+          var del = document.createElement("button"); del.className = "pi-btn del"; del.textContent = "✕"; del.title = t("remove");
+          del.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (!confirm(t("deleteEditionConfirm"))) return;
+            state.presets = state.presets.filter(function (x) { return x.id !== p.id; });
+            save(); draw();
+          });
+          item.appendChild(ren); item.appendChild(del);
+        }
+        list.appendChild(item);
+      });
+    }
+    draw();
+    m.appendChild(list);
+
+    var saveBtn = document.createElement("button");
+    saveBtn.className = "ghost"; saveBtn.style.width = "100%"; saveBtn.style.marginTop = "4px";
+    saveBtn.textContent = "＋ " + t("saveAsEdition");
+    saveBtn.addEventListener("click", function () {
+      var nn = prompt(t("editionNamePrompt"), "");
+      if (!nn || !nn.trim()) return;
+      var flat = {};
+      CATS.forEach(function (c) { flat[c] = state.cards[c].map(function (x) { return x.name; }); });
+      var p = { id: uid("e"), builtin: false, name: nn.trim(), cards: flat };
+      state.presets.push(p); state.activePresetId = p.id; save(); draw();
+    });
+    m.appendChild(saveBtn);
+
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    var done = document.createElement("button"); done.className = "primary"; done.textContent = t("done");
+    done.addEventListener("click", closeModal);
+    actions.appendChild(done); m.appendChild(actions);
+  });
+}
+
+/* ---------- help / instructions modal ---------- */
+function helpModal() {
+  var h = (I18N[lang] && I18N[lang].help) || I18N.en.help;
+  openModal(function (m) {
+    var html = "<h2>" + t("helpTitle") + "</h2><div class='help-body'>";
+    html += "<p>" + h.intro + "</p>";
+    html += "<h3>" + h.gridH + "</h3><p>" + h.grid1 + "</p>";
+    html += "<ul>"
+      + "<li><span class='key no'>✗</span> " + h.mNo + "</li>"
+      + "<li><span class='key yes'>✓</span> " + h.mYes + "</li>"
+      + "<li><span class='key maybe'>?</span> " + h.mMaybe + "</li></ul>";
+    html += "<p>" + h.grid2 + "</p>";
+    html += "<h3>" + h.deduceH + "</h3><p>" + h.deduce1 + "</p>";
+    html += "<h3>" + h.handH + "</h3><p>" + h.hand1 + "</p>";
+    html += "<h3>" + h.editionsH + "</h3><p>" + h.editions1 + "</p>";
+    html += "<h3>" + h.notesH + "</h3><p>" + h.notes1 + "</p>";
+    html += "<h3>" + h.tipH + "</h3><ul><li>" + h.tip1 + "</li><li>" + h.tip2 + "</li><li>" + h.tip3 + "</li></ul>";
+    html += "</div>";
+    m.innerHTML = html;
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    var done = document.createElement("button"); done.className = "primary"; done.textContent = t("done");
+    done.addEventListener("click", closeModal);
+    actions.appendChild(done); m.appendChild(actions);
+  });
+}
+
 /* ---------- wire up ---------- */
 function setLang(l) { lang = l; lsSet(LANG_KEY, l); render(); }
 
@@ -668,6 +946,9 @@ document.getElementById("lang-toggle").addEventListener("click", function (e) {
 });
 document.getElementById("btn-players").addEventListener("click", playersModal);
 document.getElementById("btn-settings").addEventListener("click", settingsModal);
+document.getElementById("btn-editions").addEventListener("click", editionsModal);
+document.getElementById("btn-edition-chip").addEventListener("click", editionsModal);
+document.getElementById("btn-help").addEventListener("click", helpModal);
 document.getElementById("btn-myhand").addEventListener("click", myHandModal);
 document.getElementById("btn-new").addEventListener("click", newGameModal);
 document.getElementById("notes").addEventListener("input", function (e) { state.notes = e.target.value; save(); });
