@@ -335,7 +335,14 @@ var I18N = {
     helpTitle: "How to use",
     help: {
       intro: "A digital version of the Cluedo detective sheet, plus a notepad. Everything stays on this device.",
-      gridH: "The grid",
+      rulesH: "The rules, in short",
+      rObj: "One suspect, one weapon and one room are hidden in an envelope — that's the murder. Be the first to name all three correctly.",
+      rSetup: "Without looking, put one suspect, one weapon and one room card in the envelope. Deal all the remaining cards among the players: those are the cards that are NOT the solution.",
+      rTurn: "On your turn, move into a room and make a suggestion: name a suspect, a weapon and the room you're in (e.g. \"Plum, with the rope, in the library\").",
+      rShow: "Going clockwise, the first player who holds any of the three cards you named must show you one of them privately. If nobody can, those cards may be in the envelope.",
+      rAccuse: "When you're sure, make an accusation and secretly check the envelope: right, you win; wrong, you're out of the running (but keep answering others' suggestions).",
+      rNote: "Details vary a bit between editions — follow the rules in your box.",
+      gridH: "Using the sheet",
       grid1: "Rows are the suspects, weapons and rooms; columns are the players. Tap a cell to cycle its mark:",
       mNo: "the player does NOT have this card",
       mYes: "the player HAS this card",
@@ -404,7 +411,14 @@ var I18N = {
     helpTitle: "Istruzioni",
     help: {
       intro: "Una versione digitale del foglio investigazioni del Cluedo, più un blocco appunti. Tutto resta su questo dispositivo.",
-      gridH: "La griglia",
+      rulesH: "Le regole, in breve",
+      rObj: "Un sospetto, un'arma e una stanza sono nascosti in una busta: è il delitto. Vince chi per primo li indovina tutti e tre.",
+      rSetup: "Senza guardare, metti nella busta una carta sospetto, una arma e una stanza. Distribuisci tutte le altre carte tra i giocatori: quelle NON sono la soluzione.",
+      rTurn: "Al tuo turno entra in una stanza e fai un'ipotesi: nomina un sospetto, un'arma e la stanza in cui sei (es. \"Plum, con la corda, in biblioteca\").",
+      rShow: "In senso orario, il primo giocatore che ha una delle tre carte nominate deve mostrartene una in privato. Se nessuno può, quelle carte potrebbero essere nella busta.",
+      rAccuse: "Quando sei sicuro, fai un'accusa e controlla la busta di nascosto: se è giusta vinci; se è sbagliata sei fuori dalla gara (ma continui a rispondere alle ipotesi degli altri).",
+      rNote: "I dettagli cambiano un po' tra le edizioni: segui le regole della tua scatola.",
+      gridH: "Usare il foglio",
       grid1: "Le righe sono sospetti, armi e stanze; le colonne sono i giocatori. Tocca una cella per cambiarne il segno:",
       mNo: "il giocatore NON ha questa carta",
       mYes: "il giocatore HA questa carta",
@@ -475,6 +489,7 @@ function loadPresetCards(p) {
   });
   state.cards = cats;
   state.marks = {};
+  state.auto = {};
   state.activePresetId = p.id;
   save();
 }
@@ -496,6 +511,7 @@ function defaultState() {
     ],
     cards: cats,
     marks: {},       // marks[cardId][playerId] = 'yes'|'no'|'maybe'
+    auto: {},        // auto[cardId][playerId] = true  -> this 'no' was auto-derived from a 'yes'
     notes: ""
   };
 }
@@ -508,6 +524,7 @@ function load() {
       if (s && s.players && s.cards) {
         if (!Array.isArray(s.presets)) s.presets = [];
         if (!s.activePresetId) s.activePresetId = "classic";
+        if (!s.auto) s.auto = {};
         state = s; return;
       }
     } catch (e) { /* corrupt — start fresh */ }
@@ -530,16 +547,39 @@ function setMark(cardId, playerId, val) {
 }
 var CYCLE = { "null": "no", "no": "yes", "yes": "maybe", "maybe": null };
 
+/* auto-derived 'no' tracking (so leaving a ✓ removes the ✗ it placed) */
+function isAuto(cardId, playerId) { return !!(state.auto[cardId] && state.auto[cardId][playerId]); }
+function setAuto(cardId, playerId, v) {
+  if (v) { if (!state.auto[cardId]) state.auto[cardId] = {}; state.auto[cardId][playerId] = true; }
+  else if (state.auto[cardId]) { delete state.auto[cardId][playerId]; }
+}
+
+// one owner known -> everyone else doesn't have it (only fill blanks, flag as auto)
+function cascadeYes(cardId, ownerId) {
+  state.players.forEach(function (p) {
+    if (p.id !== ownerId && getMark(cardId, p.id) === null) {
+      setMark(cardId, p.id, "no");
+      setAuto(cardId, p.id, true);
+    }
+  });
+}
+// leaving a ✓ -> remove only the ✗ that this app placed automatically
+function uncascade(cardId, ownerId) {
+  state.players.forEach(function (p) {
+    if (p.id !== ownerId && isAuto(cardId, p.id) && getMark(cardId, p.id) === "no") {
+      setMark(cardId, p.id, null);
+      setAuto(cardId, p.id, false);
+    }
+  });
+}
+
 function cycleCell(cardId, playerId) {
   var cur = getMark(cardId, playerId);
   var next = CYCLE[cur === null ? "null" : cur];
+  setAuto(cardId, playerId, false);          // a direct tap is a manual decision
   setMark(cardId, playerId, next);
-  if (state.autoDeduce && next === "yes") {
-    // one owner known -> everyone else doesn't have it (only fill blanks)
-    state.players.forEach(function (p) {
-      if (p.id !== playerId && getMark(cardId, p.id) === null) setMark(cardId, p.id, "no");
-    });
-  }
+  if (state.autoDeduce && cur === "yes" && next !== "yes") uncascade(cardId, playerId);
+  if (state.autoDeduce && next === "yes") cascadeYes(cardId, playerId);
   save();
   render();
 }
@@ -675,6 +715,7 @@ function playersModal() {
           if (state.players.length <= 2) return;
           // clean marks for this player
           Object.keys(state.marks).forEach(function (cid) { delete state.marks[cid][p.id]; });
+          Object.keys(state.auto).forEach(function (cid) { delete state.auto[cid][p.id]; });
           state.players.splice(idx, 1);
           if (!state.players.some(function (q) { return q.isMe; })) state.players[0].isMe = true;
           save(); drawList();
@@ -762,7 +803,7 @@ function settingsModal() {
       CATS.forEach(function (c) {
         cats[c] = DEFAULT_CARDS[lang][c].map(function (name) { return { id: uid("c"), name: name }; });
       });
-      state.cards = cats; state.marks = {}; save(); closeModal(); settingsModal();
+      state.cards = cats; state.marks = {}; state.auto = {}; save(); closeModal(); settingsModal();
     });
     m.appendChild(reset);
 
@@ -797,11 +838,13 @@ function myHandModal() {
         var cb = document.createElement("input"); cb.type = "checkbox";
         cb.checked = getMark(card.id, me.id) === "yes";
         cb.addEventListener("change", function () {
+          setAuto(card.id, me.id, false);
           if (cb.checked) {
             setMark(card.id, me.id, "yes");
-            state.players.forEach(function (q) { if (q.id !== me.id && getMark(card.id, q.id) === null) setMark(card.id, q.id, "no"); });
+            if (state.autoDeduce) cascadeYes(card.id, me.id);
           } else {
             setMark(card.id, me.id, null);
+            if (state.autoDeduce) uncascade(card.id, me.id);
           }
           save();
         });
@@ -826,7 +869,7 @@ function newGameModal() {
     var ok = document.createElement("button"); ok.className = "primary danger"; ok.style.color = "#fff";
     ok.style.background = "var(--no)"; ok.style.borderColor = "var(--no)";
     ok.textContent = t("clearMarks");
-    ok.addEventListener("click", function () { state.marks = {}; state.notes = ""; save(); closeModal(); });
+    ok.addEventListener("click", function () { state.marks = {}; state.auto = {}; state.notes = ""; save(); closeModal(); });
     a.appendChild(cancel); a.appendChild(ok); m.appendChild(a);
   });
 }
@@ -917,6 +960,13 @@ function helpModal() {
   openModal(function (m) {
     var html = "<h2>" + t("helpTitle") + "</h2><div class='help-body'>";
     html += "<p>" + h.intro + "</p>";
+    html += "<h3>" + h.rulesH + "</h3><ul>"
+      + "<li>" + h.rObj + "</li>"
+      + "<li>" + h.rSetup + "</li>"
+      + "<li>" + h.rTurn + "</li>"
+      + "<li>" + h.rShow + "</li>"
+      + "<li>" + h.rAccuse + "</li></ul>"
+      + "<p class='mini'>" + h.rNote + "</p>";
     html += "<h3>" + h.gridH + "</h3><p>" + h.grid1 + "</p>";
     html += "<ul>"
       + "<li><span class='key no'>✗</span> " + h.mNo + "</li>"

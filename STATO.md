@@ -20,6 +20,11 @@ aprendo il file nel browser.
 - **Marcatori per cella**: tap che cicla vuoto → ✗ (non ce l'ha) → ✓ (ce l'ha) → ? (forse) → vuoto.
 - **Deduzione automatica** (attivabile/disattivabile): quando segno ✓ a un giocatore, gli altri
   ricevono ✗ in automatico; una carta esclusa a *tutti* viene evidenziata come **SOLUZIONE**.
+  Le ✗ messe in automatico sono tracciate (`state.auto`): togliendo la ✓ (✓→?) spariscono, mentre
+  le ✗ messe a mano restano. Così è sempre possibile azzerare una riga.
+- **Istruzioni con le regole di Cluedo**: la modale ❓ include ora un riassunto delle regole del
+  gioco (obiettivo, preparazione, turno/ipotesi, confutazione, accusa), scritto con parole proprie
+  (clean-room), oltre alla guida all'uso dell'app, EN/IT.
 - **Gestione giocatori**: aggiungi/rimuovi/rinomina, scelta di quale sei "tu" (colonna evidenziata).
 - **Le mie carte**: pannello con checklist per segnare la propria mano (✓ a me, ✗ agli altri).
 - **Carte personalizzabili**: rinomina/aggiungi/togli carte per edizione diversa; reset ai default.
