@@ -29,6 +29,15 @@
     --cat-rooms: #0ca678;
     --radius: 10px;
     --tap: 44px;
+    --header-h: 52px;         /* app header height, kept in sync by JS */
+    /* Grid sizing scales with --ui-scale so the whole table can be shrunk
+       to fit the screen width (set from Settings / the Fit button). */
+    --ui-scale: 1;
+    --cell: calc(42px * var(--ui-scale));
+    --card-col: calc(124px * var(--ui-scale));
+    --cell-font: calc(19px * var(--ui-scale));
+    --card-font: calc(14px * var(--ui-scale));
+    --head-font: calc(13px * var(--ui-scale));
   }
   /* Dark palette: applied by the system in auto mode (unless forced light),
      or explicitly when data-theme="dark". Kept as two copies on purpose so a
@@ -92,7 +101,7 @@
     background: var(--panel);
     border-bottom: 1px solid var(--line);
     padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top));
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
   }
   .brand { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; }
   .brand .logo {
@@ -125,28 +134,24 @@
   main { padding: 12px; max-width: 760px; margin: 0 auto; }
 
   /* Grid */
-  /* Outer frame keeps the rounded border; the inner element scrolls.
-     Keeping the rounded corners off the scroller avoids sticky-header
-     repaint flicker (notably when scrolling back up on Chrome). */
-  .grid-wrap { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; }
-  .grid-scroll {
-    overflow: auto;
-    max-height: calc(100vh - var(--header-h, 52px) - 92px);
-    max-height: calc(100dvh - var(--header-h, 52px) - 92px);
-  }
-  table { border-collapse: collapse; width: 100%; }
+  /* Single page scroll. The frame hugs the table; the table fits the screen
+     width via --ui-scale (Settings / Fit), so no side-scrolling is needed.
+     The header row stays pinned just below the sticky app header. */
+  .grid-wrap { width: fit-content; max-width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+  table { border-collapse: collapse; }
   th, td { border: 1px solid var(--line); text-align: center; }
   thead th {
-    position: sticky; top: 0; background: var(--panel); z-index: 10;
-    font-weight: 600; font-size: 13px; padding: 8px 4px; vertical-align: bottom;
+    position: sticky; top: var(--header-h); background: var(--panel); z-index: 10;
+    font-weight: 600; font-size: var(--head-font); padding: 8px 4px; vertical-align: bottom;
   }
   th.card-head {
     position: sticky; left: 0; z-index: 20; background: var(--panel);
-    text-align: left; min-width: 118px; max-width: 150px;
+    text-align: left; min-width: var(--card-col); max-width: calc(var(--card-col) * 1.3);
   }
   td.card-cell {
     position: sticky; left: 0; z-index: 5; background: var(--panel);
-    text-align: left; padding: 8px 8px; font-size: 14px; min-width: 118px; max-width: 150px;
+    text-align: left; padding: 8px 8px; font-size: var(--card-font);
+    min-width: var(--card-col); max-width: calc(var(--card-col) * 1.3);
     line-height: 1.25;
   }
   tr.section-row th {
@@ -160,9 +165,9 @@
   tr.cat-suspects { --cat: var(--cat-suspects); }
   tr.cat-weapons { --cat: var(--cat-weapons); }
   tr.cat-rooms { --cat: var(--cat-rooms); }
-  th.player-head .pname { display: block; max-width: 72px; margin: 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  th.player-head .pname { display: block; max-width: calc(var(--cell) + 14px); margin: 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   th.player-head.me { background: var(--me); }
-  td.mark { min-width: var(--tap); height: var(--tap); padding: 0; cursor: pointer; font-size: 20px; font-weight: 700; user-select: none; }
+  td.mark { min-width: var(--cell); height: var(--cell); padding: 0; cursor: pointer; font-size: var(--cell-font); font-weight: 700; user-select: none; }
   td.col-me { background: var(--me); }
   td.mark.yes { color: var(--yes); background: var(--yes-bg); }
   td.mark.no { color: var(--no); background: var(--no-bg); }
@@ -289,9 +294,7 @@
 
 <main>
   <div class="grid-wrap">
-    <div class="grid-scroll">
-      <table id="grid"></table>
-    </div>
+    <table id="grid"></table>
   </div>
 
   <div class="legend">
@@ -377,6 +380,7 @@ var I18N = {
     solution: "SOLUTION",
     menuTitle: "Menu",
     theme: "Theme", themeAuto: "Auto", themeLight: "Light", themeDark: "Dark",
+    gridSize: "Grid size", fit: "Fit",
     privacyTitle: "Content hidden", privacySub: "So nobody can read your sheet or notes.", reveal: "Reveal",
     // editions
     editionsTitle: "Editions",
@@ -456,6 +460,7 @@ var I18N = {
     solution: "SOLUZIONE",
     menuTitle: "Menu",
     theme: "Tema", themeAuto: "Auto", themeLight: "Chiaro", themeDark: "Scuro",
+    gridSize: "Dimensione griglia", fit: "Adatta",
     privacyTitle: "Contenuto nascosto", privacySub: "Così nessuno può leggere il foglio o gli appunti.", reveal: "Mostra",
     // editions
     editionsTitle: "Edizioni",
@@ -567,11 +572,13 @@ function defaultState() {
     version: 2,
     autoDeduce: true,
     theme: "auto",   // "auto" | "light" | "dark"
+    uiScale: 1,      // grid zoom factor (0.5–1.3)
     activePresetId: "classic",
     presets: [],
     players: (function () {
       var arr = [{ id: uid("p"), name: t("me") === "io" ? "Io" : "Me", isMe: true }];
-      for (var i = 2; i <= 6; i++) arr.push({ id: uid("p"), name: t("player") + " " + i, isMe: false });
+      var short = lang === "it" ? "G" : "P";   // short labels keep columns narrow & distinct
+      for (var i = 2; i <= 6; i++) arr.push({ id: uid("p"), name: short + i, isMe: false });
       return arr;  // Cluedo seats up to 6; removing is quicker than adding
     })(),
     cards: cats,
@@ -591,6 +598,7 @@ function load() {
         if (!s.activePresetId) s.activePresetId = "classic";
         if (!s.auto) s.auto = {};
         if (!s.theme) s.theme = "auto";
+        if (typeof s.uiScale !== "number") s.uiScale = 1;
         state = s; return;
       }
     } catch (e) { /* corrupt — start fresh */ }
@@ -614,6 +622,37 @@ function setPrivacy(on) {
   var el = document.getElementById("privacy-screen");
   if (!el) return;
   if (on) el.removeAttribute("hidden"); else el.setAttribute("hidden", "");
+}
+
+/* grid zoom: scale the whole table so it fits the screen width */
+function applyScale() {
+  document.documentElement.style.setProperty("--ui-scale", (state && state.uiScale) || 1);
+}
+function setScale(s) {
+  s = Math.max(0.5, Math.min(1.3, s));
+  state.uiScale = Math.round(s * 100) / 100;
+  applyScale(); save();
+}
+function availWidth() {
+  var main = document.querySelector("main");
+  return (main ? main.clientWidth : document.documentElement.clientWidth) - 26;  // main padding + frame border
+}
+function naturalGridWidth() {
+  var tbl = document.getElementById("grid");
+  if (!tbl) return 0;
+  var w = tbl.getBoundingClientRect().width, sc = state.uiScale || 1;
+  return w > 0 ? w / sc : 0;  // width it would have at scale 1
+}
+function fitGrid() {            // fit exactly to the width (never past 100%)
+  var nat = naturalGridWidth(); if (!nat) return;
+  setScale(Math.min(1, availWidth() / nat));
+}
+function fitIfOverflow() {      // shrink only, so the page never needs side-scroll on load
+  var nat = naturalGridWidth(); if (!nat) return;
+  if (nat * (state.uiScale || 1) > availWidth() + 1) {
+    var s = availWidth() / nat;
+    if (s < (state.uiScale || 1)) setScale(s);
+  }
 }
 
 /* ---------- mark helpers ---------- */
@@ -673,6 +712,7 @@ function isSolved(cardId) {
 /* ---------- render grid ---------- */
 function render() {
   applyTheme();
+  applyScale();
   document.getElementById("app-title").textContent = t("title");
   document.documentElement.lang = lang;
   // static i18n labels
@@ -745,6 +785,7 @@ function render() {
   });
   tbl.appendChild(tbody);
   updateHeaderOffset();
+  fitIfOverflow();
 }
 
 // keep the grid's available height in sync with the (wrapping) app header
@@ -852,6 +893,24 @@ function settingsModal() {
       seg.appendChild(b);
     });
     thRow.appendChild(seg); m.appendChild(thRow);
+
+    // grid size (zoom to fit the screen width)
+    var szWrap = document.createElement("div"); szWrap.style.margin = "14px 0 2px";
+    var szl = document.createElement("div"); szl.textContent = t("gridSize"); szl.style.marginBottom = "6px";
+    var ctrl = document.createElement("div");
+    ctrl.style.display = "flex"; ctrl.style.alignItems = "center"; ctrl.style.gap = "8px";
+    var minus = document.createElement("button"); minus.className = "icon"; minus.textContent = "−";
+    var val = document.createElement("span");
+    val.style.minWidth = "52px"; val.style.textAlign = "center"; val.style.fontVariantNumeric = "tabular-nums";
+    function showVal() { val.textContent = Math.round((state.uiScale || 1) * 100) + "%"; }
+    showVal();
+    var plus = document.createElement("button"); plus.className = "icon"; plus.textContent = "+";
+    var fitBtn = document.createElement("button"); fitBtn.className = "ghost"; fitBtn.style.marginLeft = "auto"; fitBtn.textContent = t("fit");
+    minus.addEventListener("click", function () { setScale((state.uiScale || 1) - 0.1); showVal(); });
+    plus.addEventListener("click", function () { setScale((state.uiScale || 1) + 0.1); showVal(); });
+    fitBtn.addEventListener("click", function () { fitGrid(); showVal(); });
+    ctrl.appendChild(minus); ctrl.appendChild(val); ctrl.appendChild(plus); ctrl.appendChild(fitBtn);
+    szWrap.appendChild(szl); szWrap.appendChild(ctrl); m.appendChild(szWrap);
 
     // auto deduce toggle
     var tog = document.createElement("div");
@@ -1136,7 +1195,7 @@ document.getElementById("btn-edition-chip").addEventListener("click", editionsMo
 document.getElementById("btn-privacy").addEventListener("click", function () { setPrivacy(true); });
 document.getElementById("ps-reveal").addEventListener("click", function () { setPrivacy(false); });
 document.getElementById("notes").addEventListener("input", function (e) { state.notes = e.target.value; save(); });
-window.addEventListener("resize", updateHeaderOffset);
+window.addEventListener("resize", function () { updateHeaderOffset(); fitIfOverflow(); });
 
 load();
 render();

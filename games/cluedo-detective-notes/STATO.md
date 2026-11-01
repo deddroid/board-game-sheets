@@ -15,9 +15,15 @@ aggiunge un **blocco appunti** libero — l'unica cosa che a Get a Clue manca.
 Un unico file `index.html` autonomo, nessuna dipendenza, funziona offline. Apribile dal telefono
 aprendo il file nel browser.
 
-- **Griglia** sospetti / armi / stanze × giocatori, ottimizzata per il telefono (tap target grandi,
-  dark mode automatica). Scorre dentro il proprio riquadro: la **riga dei nomi (intestazioni)** resta
-  fissa in alto scorrendo in verticale e la **prima colonna** resta fissa scorrendo in orizzontale.
+- **Griglia** sospetti / armi / stanze × giocatori, ottimizzata per il telefono (dark mode
+  automatica). **Scorrimento unico di pagina**: la **riga dei nomi (intestazioni)** resta fissa in
+  alto appena sotto l'header dell'app (sticky `top: var(--header-h)`), quindi è sempre visibile a
+  qualunque altezza di scroll — niente più risalire tutta la pagina per rivederla. La **prima colonna**
+  resta fissa a sinistra.
+- **Ridimensionamento della griglia (zoom)**: controllo in Impostazioni (− / % / + e **Adatta**) che
+  scala tutta la tabella via `--ui-scale`. All'avvio e al ridimensionamento si **adatta da sola alla
+  larghezza** (riduce solo quanto serve) così entra tutto senza scorrere a sinistra/destra. Nomi
+  giocatori di default brevi (Io, G2…G6) e colonne strette per lasciare celle più grandi.
 - **Marcatori per cella**: tap che cicla vuoto → ✗ (non ce l'ha) → ✓ (ce l'ha) → ? (forse) → vuoto.
 - **Deduzione automatica** (attivabile/disattivabile): quando segno ✓ a un giocatore, gli altri
   ricevono ✗ in automatico; una carta esclusa a *tutti* viene evidenziata come **SOLUZIONE**.
@@ -66,6 +72,11 @@ aprendo il file nel browser.
   "io"; carte classiche 6/6/9; ciclo dei marcatori; cascata ✗ auto che preserva le ✗ a mano;
   un-cascade che toglie solo le auto; rilevamento SOLUZIONE; cambio edizione che azzera segni/auto e
   scambia le carte; `activePreset`; differenza i18n IT/EN.
+- **Scroll unico + zoom/fit** (nuova suite, 15/15 PASS, viewport 375px): 6 giocatori con nomi brevi;
+  adattamento alla larghezza senza scroll orizzontale (griglia ≤ larghezza disponibile); intestazioni
+  colonne fissate appena sotto l'header dell'app anche in fondo alla pagina; `setScale` con clamp
+  [0.5, 1.3]; `fitGrid` che adatta; variabile `--ui-scale` applicata; regressioni OK su
+  cascata/un-cascade, tema e privacy. Header forzato a una riga (titolo troncato) a 375px.
 
 ## Da fare / possibili migliorie
 
