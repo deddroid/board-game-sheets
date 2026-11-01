@@ -38,6 +38,12 @@ aprendo il file nel browser.
   di rado — lingua, giocatori, edizioni, le mie carte, impostazioni, istruzioni, nuova partita — sono
   raccolte nel menu, così resta più spazio alla griglia sul telefono. Colori per categoria
   (sospetti/armi/stanze), chip con l'edizione attiva.
+- **Tema**: selettore in Impostazioni **Auto / Chiaro / Scuro**. "Auto" segue il sistema
+  (`prefers-color-scheme`); "Chiaro"/"Scuro" forzano il tema via `data-theme` su `<html>` e vincono
+  sul sistema (salvato in `state.theme`).
+- **Privacy**: tasto 🙈 nell'header che copre tutto lo schermo (foglio + appunti) con una schermata
+  "Contenuto nascosto" e un pulsante **Mostra** per tornare. Serve a non far copiare gli appunti agli
+  altri. In memoria (un refresh lo azzera).
 - **Blocco appunti** libero, sotto la griglia.
 - **Salvataggio locale** su `localStorage` (best-effort, con fallback in memoria dove lo storage è
   disabilitato — es. apertura come `data:` URL). Tutto resta solo sul dispositivo.
