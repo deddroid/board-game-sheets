@@ -9,12 +9,16 @@
   :root{
     --bg:#f4f5f7; --card:#ffffff; --fg:#1b1d22; --muted:#5d6672;
     --border:#e2e5ea; --accent:#3b6fd4; --accent-fg:#ffffff;
+    --badge-bg:#eef2fb; --badge-fg:#3b6fd4;
+    --field:#ffffff;
     --shadow:0 1px 3px rgba(20,25,40,.08),0 8px 24px rgba(20,25,40,.06);
   }
   @media (prefers-color-scheme:dark){
     :root{
       --bg:#14161b; --card:#1d2027; --fg:#eceef2; --muted:#9aa3b2;
       --border:#2a2e37; --accent:#6f9bff; --accent-fg:#0d1016;
+      --badge-bg:#23314f; --badge-fg:#9cb8ff;
+      --field:#161920;
       --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
     }
   }
@@ -27,8 +31,9 @@
     padding:16px; padding-bottom:40px;
   }
   .wrap{max-width:720px; margin:0 auto}
-  header{display:flex; align-items:flex-start; gap:12px; margin:8px 0 20px}
-  .title{flex:1}
+
+  header{display:flex; align-items:flex-start; gap:12px; margin:8px 0 18px}
+  .title{flex:1; min-width:0}
   h1{font-size:1.6rem; margin:0 0 4px; letter-spacing:-.01em}
   .sub{color:var(--muted); margin:0; font-size:.95rem}
   .lang{
@@ -40,6 +45,25 @@
     font:inherit; font-size:.85rem; font-weight:600; padding:7px 12px; cursor:pointer;
   }
   .lang button[aria-pressed="true"]{background:var(--accent); color:var(--accent-fg)}
+
+  .search{position:relative; margin:0 0 18px}
+  .search svg{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:18px; height:18px; color:var(--muted); pointer-events:none;
+  }
+  .search input{
+    width:100%; font:inherit; font-size:1rem; color:var(--fg);
+    background:var(--field); border:1px solid var(--border); border-radius:12px;
+    padding:12px 40px; outline:none; transition:border-color .12s ease;
+  }
+  .search input:focus{border-color:var(--accent)}
+  .search .clear{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    appearance:none; border:0; background:transparent; color:var(--muted);
+    font-size:1.3rem; line-height:1; padding:6px 8px; cursor:pointer; display:none;
+  }
+  .search.has-value .clear{display:block}
+
   .games{list-style:none; margin:0; padding:0; display:grid; gap:12px}
   .game{
     display:flex; align-items:center; gap:14px; text-decoration:none; color:inherit;
@@ -49,10 +73,23 @@
   .game:hover{transform:translateY(-2px); border-color:var(--accent)}
   .game:active{transform:translateY(0)}
   .emoji{font-size:1.9rem; line-height:1; flex:none; width:44px; text-align:center}
-  .game .name{font-weight:650; font-size:1.08rem; margin:0}
-  .game .desc{color:var(--muted); font-size:.9rem; margin:3px 0 0}
+  .text{display:flex; flex-direction:column; gap:3px; min-width:0}
+  .name-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .name{font-weight:650; font-size:1.08rem}
+  .compat{
+    font-size:.72rem; font-weight:600; letter-spacing:.01em;
+    color:var(--badge-fg); background:var(--badge-bg);
+    padding:2px 8px; border-radius:999px; white-space:nowrap;
+  }
+  .desc{color:var(--muted); font-size:.9rem}
   .arrow{margin-left:auto; color:var(--muted); flex:none; font-size:1.2rem}
-  footer{margin-top:28px; text-align:center; color:var(--muted); font-size:.8rem}
+
+  .empty{
+    display:none; text-align:center; color:var(--muted); font-size:.95rem;
+    padding:28px 12px; border:1px dashed var(--border); border-radius:14px;
+  }
+
+  footer{margin-top:28px; text-align:center; color:var(--muted); font-size:.78rem; line-height:1.5}
   footer a{color:inherit}
 </style>
 </head>
@@ -69,24 +106,40 @@
     </div>
   </header>
 
+  <div class="search" id="searchBox">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input type="text" id="search" autocomplete="off" spellcheck="false"
+           aria-label="Search games" placeholder="Search a game…">
+    <button type="button" class="clear" id="clear" aria-label="Clear">&times;</button>
+  </div>
+
   <ul class="games" id="games"></ul>
+  <p class="empty" id="empty">Nothing found.</p>
 
   <footer>
-    <span data-i18n="footer">Each sheet is a single HTML file — works offline, nothing to install.</span>
+    <span data-i18n="footer">Each sheet is a single HTML file — works offline, nothing to install.</span><br>
+    <span data-i18n="disclaimer">Unofficial fan-made tools. Game names are trademarks of their respective owners and are used only to describe compatibility.</span>
   </footer>
 </div>
 
 <script>
 // --- Game registry: add a game = add an entry here + its folder under games/ ---
+// "aka" = searchable aliases (real names, keywords) — not shown as the title,
+//         but let people find a game by the name they know.
 const GAMES = [
   {
     emoji: "🔍",
     path: "games/cluedo-detective-notes/index.html",
     name: { en: "Detective Notes", it: "Note dell'investigatore" },
+    compat: "Cluedo",
     desc: {
       en: "Deduction sheet for the classic whodunit: suspects, weapons, rooms.",
       it: "Foglio di deduzione per il giallo classico: sospetti, armi, stanze."
-    }
+    },
+    aka: ["cluedo","clue","detective","murder mystery","whodunit","giallo","deduzione","investigazione","sospetti","armi","stanze"]
   }
 ];
 
@@ -94,47 +147,88 @@ const UI = {
   en: {
     title: "Board Game Sheets",
     sub: "Offline companion sheets for board games — one file each, open on any phone.",
-    footer: "Each sheet is a single HTML file — works offline, nothing to install."
+    search: "Search a game…",
+    compat: "for %s",
+    empty: "No game matches your search.",
+    footer: "Each sheet is a single HTML file — works offline, nothing to install.",
+    disclaimer: "Unofficial fan-made tools. Game names are trademarks of their respective owners and are used only to describe compatibility."
   },
   it: {
     title: "Fogli per giochi da tavolo",
     sub: "Fogli di supporto offline per i giochi da tavolo — un file ciascuno, aprili da qualsiasi telefono.",
-    footer: "Ogni foglio è un singolo file HTML — funziona offline, niente da installare."
+    search: "Cerca un gioco…",
+    compat: "per %s",
+    empty: "Nessun gioco corrisponde alla ricerca.",
+    footer: "Ogni foglio è un singolo file HTML — funziona offline, niente da installare.",
+    disclaimer: "Strumenti non ufficiali creati dai fan. I nomi dei giochi sono marchi dei rispettivi proprietari, usati solo per indicare la compatibilità."
   }
 };
+
+let lang = "en";
+const norm = s => (s||"").toLowerCase()
+  .normalize("NFD").replace(/[̀-ͯ]/g,"");  // strip accents for matching
 
 function getLang(){
   try { const s = localStorage.getItem("bgs-lang"); if (s==="en"||s==="it") return s; } catch(e){}
   return (navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en";
 }
-function setLang(lang){
+function setLang(next){
+  lang = next;
   try { localStorage.setItem("bgs-lang", lang); } catch(e){}
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-i18n]").forEach(el=>{
     const k = el.getAttribute("data-i18n");
     if (UI[lang][k]) el.textContent = UI[lang][k];
   });
+  document.getElementById("search").placeholder = UI[lang].search;
+  document.getElementById("empty").textContent = UI[lang].empty;
   document.querySelectorAll(".lang button").forEach(b=>{
     b.setAttribute("aria-pressed", String(b.dataset.lang===lang));
   });
-  renderGames(lang);
+  render();
 }
-function renderGames(lang){
+
+function haystack(g){
+  return norm([
+    g.name.en, g.name.it, g.desc.en, g.desc.it, g.compat || "",
+    (g.aka||[]).join(" ")
+  ].join(" "));
+}
+
+function render(){
+  const q = norm(document.getElementById("search").value.trim());
   const ul = document.getElementById("games");
   ul.innerHTML = "";
+  let shown = 0;
   GAMES.forEach(g=>{
+    if (q && !haystack(g).includes(q)) return;
+    shown++;
     const a = document.createElement("a");
     a.className = "game";
     a.href = g.path;
+    const compat = g.compat
+      ? '<span class="compat">'+UI[lang].compat.replace("%s", g.compat)+'</span>' : '';
     a.innerHTML =
       '<span class="emoji" aria-hidden="true">'+g.emoji+'</span>'+
-      '<span><span class="name">'+g.name[lang]+'</span>'+
-      '<span class="desc">'+g.desc[lang]+'</span></span>'+
+      '<span class="text">'+
+        '<span class="name-row"><span class="name">'+g.name[lang]+'</span>'+compat+'</span>'+
+        '<span class="desc">'+g.desc[lang]+'</span>'+
+      '</span>'+
       '<span class="arrow" aria-hidden="true">→</span>';
     ul.appendChild(a);
   });
+  document.getElementById("empty").style.display = shown ? "none" : "block";
 }
 
+const input = document.getElementById("search");
+const box = document.getElementById("searchBox");
+input.addEventListener("input", ()=>{
+  box.classList.toggle("has-value", input.value.length>0);
+  render();
+});
+document.getElementById("clear").addEventListener("click", ()=>{
+  input.value = ""; box.classList.remove("has-value"); input.focus(); render();
+});
 document.querySelectorAll(".lang button").forEach(b=>{
   b.addEventListener("click", ()=>setLang(b.dataset.lang));
 });
