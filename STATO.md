@@ -71,11 +71,6 @@ aprendo il file nel browser.
   ufficiali espanse (es. Master Detective/Super Cluedo) per non spedire liste potenzialmente
   inesatte e per prudenza sui marchi; l'utente può crearle da sé, oppure aggiungerle su richiesta
   indicando le carte esatte. Da rivedere i nomi delle edizioni prima di un'eventuale pubblicazione.
-- **Multilingua per i personaggi**: le edizioni personalizzate accettano già nomi in qualsiasi
-  lingua (si digitano a mano). Per i set *predefiniti* in più lingue servono due decisioni: (a) quali
-  lingue; (b) se tradurre anche l'interfaccia o solo i nomi delle carte. Possibili vie: estendere
-  `DEFAULT_CARDS` con altre lingue e ampliare il selettore; oppure pubblicare "edizioni ufficiali"
-  localizzate importabili. Da concordare le lingue esatte (evitare traduzioni a caso).
 - Eventuale registro strutturato dei turni (chi ha chiesto cosa, chi ha mostrato) oltre al blocco
   appunti libero.
 - Note per singola cella / segni liberi dentro la cella.
@@ -89,6 +84,8 @@ aprendo il file nel browser.
 - **Nome pubblico:** usato "Detective Notes" (neutro). "Cluedo" / "Clue" / "Get a Clue" sono marchi.
   Da confermare.
 - **Lingua UI:** inglese con italiano selezionabile (da GUIDA-PROGETTI). Fatto.
+- **Set di carte predefiniti:** solo EN/IT (deciso dall'utente, 01/11/2026). Altre lingue/edizioni si
+  creano a mano come edizioni personalizzate (già supportate). Niente set predefiniti in altre lingue.
 
 ## Vincoli
 
