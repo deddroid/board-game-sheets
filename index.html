@@ -82,6 +82,7 @@
     padding:2px 8px; border-radius:999px; white-space:nowrap;
   }
   .desc{color:var(--muted); font-size:.9rem}
+  .ver{color:var(--muted); font-size:.74rem; opacity:.75; margin-top:2px; font-variant-numeric:tabular-nums}
   .arrow{margin-left:auto; color:var(--muted); flex:none; font-size:1.2rem}
 
   .empty{
@@ -121,7 +122,8 @@
 
   <footer>
     <span data-i18n="footer">Each sheet is a single HTML file — works offline, nothing to install.</span><br>
-    <span data-i18n="disclaimer">Unofficial fan-made tools. Game names are trademarks of their respective owners and are used only to describe compatibility.</span>
+    <span data-i18n="disclaimer">Unofficial fan-made tools. Game names are trademarks of their respective owners and are used only to describe compatibility.</span><br>
+    <span class="ver" id="suiteVer"></span>
   </footer>
 </div>
 
@@ -135,6 +137,8 @@ const GAMES = [
     path: "games/cluedo-detective-notes/index.html",
     name: { en: "Detective Notes", it: "Note dell'investigatore" },
     compat: "Cluedo",
+    version: "1.0.0",
+    updated: "2026-11-01",
     desc: {
       en: "Deduction sheet for the classic whodunit: suspects, weapons, rooms.",
       it: "Foglio di deduzione per il giallo classico: sospetti, armi, stanze."
@@ -142,6 +146,10 @@ const GAMES = [
     aka: ["cluedo","clue","detective","murder mystery","whodunit","giallo","deduzione","investigazione","sospetti","armi","stanze"]
   }
 ];
+
+// Suite version (the launcher itself) — bump when you change this page.
+const SUITE_VERSION = "1.0.0";
+const SUITE_UPDATED = "2026-11-01";
 
 const UI = {
   en: {
@@ -208,11 +216,14 @@ function render(){
     a.href = g.path;
     const compat = g.compat
       ? '<span class="compat">'+UI[lang].compat.replace("%s", g.compat)+'</span>' : '';
+    const ver = g.version
+      ? '<span class="ver">v'+g.version+(g.updated ? ' · '+g.updated : '')+'</span>' : '';
     a.innerHTML =
       '<span class="emoji" aria-hidden="true">'+g.emoji+'</span>'+
       '<span class="text">'+
         '<span class="name-row"><span class="name">'+g.name[lang]+'</span>'+compat+'</span>'+
         '<span class="desc">'+g.desc[lang]+'</span>'+
+        ver+
       '</span>'+
       '<span class="arrow" aria-hidden="true">→</span>';
     ul.appendChild(a);
@@ -233,6 +244,7 @@ document.querySelectorAll(".lang button").forEach(b=>{
   b.addEventListener("click", ()=>setLang(b.dataset.lang));
 });
 setLang(getLang());
+document.getElementById("suiteVer").textContent = "Suite v" + SUITE_VERSION + " · " + SUITE_UPDATED;
 </script>
 </body>
 </html>

@@ -312,6 +312,7 @@
   <p class="mini" style="margin-top:22px;text-align:center" data-i18n="footer">
     Offline — everything is saved on this device only. Open-source Cluedo detective notes.
   </p>
+  <p class="mini" style="margin-top:6px;text-align:center;opacity:.6" id="app-version"></p>
 </main>
 
 <div id="privacy-screen" class="privacy-screen" hidden>
@@ -335,6 +336,10 @@
 
 var STORE_KEY = "detective-notes:v1";
 var LANG_KEY = "detective-notes:lang";
+
+/* ---------- app version (bump on every published change) ---------- */
+var APP_VERSION = "1.0.0";
+var APP_DATE = "2026-11-01";
 
 /* Safe storage: localStorage may be unavailable (private mode, data: URLs).
    The app must still work in-memory; persistence is best-effort. */
@@ -1200,6 +1205,9 @@ window.addEventListener("resize", function () { updateHeaderOffset(); fitIfOverf
 load();
 render();
 updateHeaderOffset();
+
+var _ver = document.getElementById("app-version");
+if (_ver) _ver.textContent = "v" + APP_VERSION + " · " + APP_DATE;
 </script>
 </body>
 </html>
