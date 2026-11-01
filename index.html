@@ -100,12 +100,14 @@
   main { padding: 12px; max-width: 760px; margin: 0 auto; }
 
   /* Grid */
-  .grid-wrap {
-    overflow: auto; -webkit-overflow-scrolling: touch;
-    border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
-    /* scroll inside the box so the header row can stay pinned at its top */
-    max-height: calc(100vh - var(--header-h, 56px) - 128px);
-    max-height: calc(100dvh - var(--header-h, 56px) - 128px);
+  /* Outer frame keeps the rounded border; the inner element scrolls.
+     Keeping the rounded corners off the scroller avoids sticky-header
+     repaint flicker (notably when scrolling back up on Chrome). */
+  .grid-wrap { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; }
+  .grid-scroll {
+    overflow: auto;
+    max-height: calc(100vh - var(--header-h, 52px) - 92px);
+    max-height: calc(100dvh - var(--header-h, 52px) - 92px);
   }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid var(--line); text-align: center; }
@@ -160,6 +162,17 @@
 
   .hint { color: var(--muted); font-size: 13px; margin: 6px 2px; }
   .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* Menu sheet */
+  .menu-lang { display: flex; align-items: center; gap: 10px; padding: 10px 2px 4px; }
+  .menu-lang .lang-toggle { margin-left: auto; }
+  .menu-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 2px; }
+  .menu-item {
+    display: flex; align-items: center; gap: 12px; width: 100%; justify-content: flex-start;
+    padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--panel); font-size: 15px; text-align: left;
+  }
+  .menu-item .mi-ico { font-size: 18px; width: 22px; text-align: center; flex: none; }
 
   /* Modal */
   .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
@@ -227,28 +240,15 @@
     <span class="logo">🔍</span>
     <h1 id="app-title">Detective Notes</h1>
   </div>
-  <div class="toolbar">
-    <div class="lang-toggle" id="lang-toggle">
-      <button data-lang="en">EN</button>
-      <button data-lang="it">IT</button>
-    </div>
-    <button class="icon" id="btn-editions" title="Editions">🃏</button>
-    <button class="icon" id="btn-players" title="Players">👥</button>
-    <button class="icon" id="btn-help" title="How to use">❓</button>
-    <button class="icon" id="btn-settings" title="Settings">⚙️</button>
-  </div>
+  <button id="btn-edition-chip" class="chip" title="Editions">🃏 <b id="edition-name">Classic</b></button>
+  <button class="icon" id="btn-menu" title="Menu" aria-label="Menu">☰</button>
 </header>
 
 <main>
-  <div class="row-actions" style="margin-top:0;margin-bottom:10px">
-    <button id="btn-edition-chip" class="chip" title="Editions">🃏 <b id="edition-name">Classic</b></button>
-    <button id="btn-myhand" class="ghost" data-i18n="myHand">My cards</button>
-    <div class="spacer"></div>
-    <button id="btn-new" class="ghost" data-i18n="newGame">New game</button>
-  </div>
-
   <div class="grid-wrap">
-    <table id="grid"></table>
+    <div class="grid-scroll">
+      <table id="grid"></table>
+    </div>
   </div>
 
   <div class="legend">
@@ -323,6 +323,7 @@ var I18N = {
     newGameHint: "This clears all marks and the notepad. Players and cards are kept.",
     clearMarks: "Clear marks & notes",
     solution: "SOLUTION",
+    menuTitle: "Menu",
     // editions
     editionsTitle: "Editions",
     editionsHint: "Each edition is a named set of suspects, weapons and rooms. Pick one to load it onto the sheet.",
@@ -399,6 +400,7 @@ var I18N = {
     newGameHint: "Azzera tutti i segni e il blocco appunti. Giocatori e carte restano.",
     clearMarks: "Azzera segni e appunti",
     solution: "SOLUZIONE",
+    menuTitle: "Menu",
     // editions
     editionsTitle: "Edizioni",
     editionsHint: "Ogni edizione è un insieme di sospetti, armi e stanze con un nome. Scegline una per caricarla sul foglio.",
@@ -510,11 +512,11 @@ function defaultState() {
     autoDeduce: true,
     activePresetId: "classic",
     presets: [],
-    players: [
-      { id: uid("p"), name: t("me") === "io" ? "Io" : "Me", isMe: true },
-      { id: uid("p"), name: t("player") + " 2", isMe: false },
-      { id: uid("p"), name: t("player") + " 3", isMe: false }
-    ],
+    players: (function () {
+      var arr = [{ id: uid("p"), name: t("me") === "io" ? "Io" : "Me", isMe: true }];
+      for (var i = 2; i <= 6; i++) arr.push({ id: uid("p"), name: t("player") + " " + i, isMe: false });
+      return arr;  // Cluedo seats up to 6; removing is quicker than adding
+    })(),
     cards: cats,
     marks: {},       // marks[cardId][playerId] = 'yes'|'no'|'maybe'
     auto: {},        // auto[cardId][playerId] = true  -> this 'no' was auto-derived from a 'yes'
@@ -1000,20 +1002,48 @@ function helpModal() {
   });
 }
 
-/* ---------- wire up ---------- */
-function setLang(l) { lang = l; lsSet(LANG_KEY, l); render(); }
+/* ---------- menu sheet (groups the not-often-used options) ---------- */
+function menuModal() {
+  openModal(function (m) {
+    m.innerHTML = "<h2>" + t("menuTitle") + "</h2>";
 
-document.getElementById("lang-toggle").addEventListener("click", function (e) {
-  var b = e.target.closest("button[data-lang]");
-  if (b) setLang(b.getAttribute("data-lang"));
-});
-document.getElementById("btn-players").addEventListener("click", playersModal);
-document.getElementById("btn-settings").addEventListener("click", settingsModal);
-document.getElementById("btn-editions").addEventListener("click", editionsModal);
+    var langRow = document.createElement("div"); langRow.className = "menu-lang";
+    var ll = document.createElement("span"); ll.textContent = t("language"); langRow.appendChild(ll);
+    var lt = document.createElement("div"); lt.className = "lang-toggle";
+    ["en", "it"].forEach(function (l) {
+      var b = document.createElement("button"); b.textContent = l.toUpperCase();
+      if (l === lang) b.classList.add("on");
+      b.addEventListener("click", function () { lang = l; lsSet(LANG_KEY, l); closeModal(); menuModal(); });
+      lt.appendChild(b);
+    });
+    langRow.appendChild(lt); m.appendChild(langRow);
+
+    var list = document.createElement("div"); list.className = "menu-list";
+    [
+      { ico: "👥", label: t("playersTitle"), fn: playersModal },
+      { ico: "🃏", label: t("editionsTitle"), fn: editionsModal },
+      { ico: "🙋", label: t("myHand"), fn: myHandModal },
+      { ico: "⚙️", label: t("settingsTitle"), fn: settingsModal },
+      { ico: "❓", label: t("helpTitle"), fn: helpModal },
+      { ico: "🔄", label: t("newGame"), fn: newGameModal }
+    ].forEach(function (it) {
+      var b = document.createElement("button"); b.className = "menu-item";
+      b.innerHTML = "<span class='mi-ico'>" + it.ico + "</span>";
+      var sp = document.createElement("span"); sp.textContent = it.label; b.appendChild(sp);
+      b.addEventListener("click", function () { closeModal(); it.fn(); });
+      list.appendChild(b);
+    });
+    m.appendChild(list);
+
+    var actions = document.createElement("div"); actions.className = "modal-actions";
+    var done = document.createElement("button"); done.className = "primary"; done.textContent = t("done");
+    done.addEventListener("click", closeModal); actions.appendChild(done); m.appendChild(actions);
+  });
+}
+
+/* ---------- wire up ---------- */
+document.getElementById("btn-menu").addEventListener("click", menuModal);
 document.getElementById("btn-edition-chip").addEventListener("click", editionsModal);
-document.getElementById("btn-help").addEventListener("click", helpModal);
-document.getElementById("btn-myhand").addEventListener("click", myHandModal);
-document.getElementById("btn-new").addEventListener("click", newGameModal);
 document.getElementById("notes").addEventListener("input", function (e) { state.notes = e.target.value; save(); });
 window.addEventListener("resize", updateHeaderOffset);
 

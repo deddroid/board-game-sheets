@@ -26,14 +26,18 @@ aprendo il file nel browser.
 - **Istruzioni con le regole di Cluedo**: la modale ❓ include ora un riassunto delle regole del
   gioco (obiettivo, preparazione, turno/ipotesi, confutazione, accusa), scritto con parole proprie
   (clean-room), oltre alla guida all'uso dell'app, EN/IT.
-- **Gestione giocatori**: aggiungi/rimuovi/rinomina, scelta di quale sei "tu" (colonna evidenziata).
+- **Gestione giocatori**: parte da **6 giocatori** (il massimo del Cluedo: togliere è più veloce che
+  aggiungere); aggiungi/rimuovi/rinomina, scelta di quale sei "tu" (colonna evidenziata).
 - **Le mie carte**: pannello con checklist per segnare la propria mano (✓ a me, ✗ agli altri).
 - **Carte personalizzabili**: rinomina/aggiungi/togli carte per edizione diversa; reset ai default.
 - **Edizioni (preset)**: icona 🃏 + chip con l'edizione attiva. Edizione predefinita "Classico" (EN/IT);
   si possono salvare edizioni personalizzate dalle carte correnti, rinominarle, eliminarle e passare
   dall'una all'altra (il cambio chiede conferma e azzera i segni, il blocco appunti resta).
 - **Istruzioni**: icona ❓ con una guida all'uso dell'app + consigli rapidi di gioco (EN/IT).
-- **UI**: header con logo e toolbar, colori per categoria (sospetti/armi/stanze), chip edizione.
+- **UI**: header compatto a una riga (logo + titolo + chip edizione + **menu ☰**); le opzioni usate
+  di rado — lingua, giocatori, edizioni, le mie carte, impostazioni, istruzioni, nuova partita — sono
+  raccolte nel menu, così resta più spazio alla griglia sul telefono. Colori per categoria
+  (sospetti/armi/stanze), chip con l'edizione attiva.
 - **Blocco appunti** libero, sotto la griglia.
 - **Salvataggio locale** su `localStorage` (best-effort, con fallback in memoria dove lo storage è
   disabilitato — es. apertura come `data:` URL). Tutto resta solo sul dispositivo.
@@ -46,6 +50,16 @@ aprendo il file nel browser.
 - i18n IT/EN, colonna "io" evidenziata, layout mobile con header/colonna sticky: OK.
 - Correzione fatta: la lettura di `localStorage` a livello globale bloccava lo script nei contesti
   dove lo storage è disabilitato → ora tutte le letture/scritture passano da wrapper protetti.
+- Header compatto + menu, 6 giocatori di default, intestazioni sticky su entrambi gli assi: OK.
+- **Flicker intestazioni risalendo**: la griglia ora scorre in un elemento interno senza angoli
+  arrotondati (il bordo tondo sta sul riquadro esterno con `overflow:hidden`); tolto anche
+  `-webkit-overflow-scrolling`. Riduce il ridisegno della riga sticky scorrendo verso l'alto su
+  Chrome. Essendo un artefatto di compositing di 1 frame, difficile da catturare in automatico: da
+  controllare sul telefono reale.
+- **Test funzionali** (eseguiti nel contesto della pagina, 17/17 PASS): default 6 giocatori e un solo
+  "io"; carte classiche 6/6/9; ciclo dei marcatori; cascata ✗ auto che preserva le ✗ a mano;
+  un-cascade che toglie solo le auto; rilevamento SOLUZIONE; cambio edizione che azzera segni/auto e
+  scambia le carte; `activePreset`; differenza i18n IT/EN.
 
 ## Da fare / possibili migliorie
 
@@ -57,6 +71,11 @@ aprendo il file nel browser.
   ufficiali espanse (es. Master Detective/Super Cluedo) per non spedire liste potenzialmente
   inesatte e per prudenza sui marchi; l'utente può crearle da sé, oppure aggiungerle su richiesta
   indicando le carte esatte. Da rivedere i nomi delle edizioni prima di un'eventuale pubblicazione.
+- **Multilingua per i personaggi**: le edizioni personalizzate accettano già nomi in qualsiasi
+  lingua (si digitano a mano). Per i set *predefiniti* in più lingue servono due decisioni: (a) quali
+  lingue; (b) se tradurre anche l'interfaccia o solo i nomi delle carte. Possibili vie: estendere
+  `DEFAULT_CARDS` con altre lingue e ampliare il selettore; oppure pubblicare "edizioni ufficiali"
+  localizzate importabili. Da concordare le lingue esatte (evitare traduzioni a caso).
 - Eventuale registro strutturato dei turni (chi ha chiesto cosa, chi ha mostrato) oltre al blocco
   appunti libero.
 - Note per singola cella / segni liberi dentro la cella.
