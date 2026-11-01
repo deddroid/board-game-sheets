@@ -42,10 +42,16 @@ board-game-sheets/
   gestione giocatori, blocco appunti, salvataggio locale, UI EN/IT. Sessione dedicata: `cluedo-notes`.
   Nome pubblico neutro "Detective Notes" (cartella storica: `cluedo-detective-notes`).
 
+## Pubblicazione
+
+- **Repo GitHub** (pubblico): https://github.com/deddroid/board-game-sheets
+- **GitHub Pages** attivo (branch `main`, root):
+  - Home: https://deddroid.github.io/board-game-sheets/
+  - Detective Notes: https://deddroid.github.io/board-game-sheets/games/cluedo-detective-notes/
+
 ## Da fare
 
 - Aggiungere altri giochi su richiesta (una sessione per gioco), ognuno sotto `games/`.
-- Attivare GitHub Pages (opzionale) per link diretti ai giochi.
 
 ## Vincoli
 

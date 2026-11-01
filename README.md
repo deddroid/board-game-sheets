@@ -8,6 +8,8 @@ and open it on your phone.
 
 Every sheet has an in-app **English / Italian** language switch.
 
+**Live:** https://deddroid.github.io/board-game-sheets/
+
 ## Games
 
 | Game | Folder | What it does |
