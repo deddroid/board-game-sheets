@@ -100,7 +100,13 @@
   main { padding: 12px; max-width: 760px; margin: 0 auto; }
 
   /* Grid */
-  .grid-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+  .grid-wrap {
+    overflow: auto; -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+    /* scroll inside the box so the header row can stay pinned at its top */
+    max-height: calc(100vh - var(--header-h, 56px) - 128px);
+    max-height: calc(100dvh - var(--header-h, 56px) - 128px);
+  }
   table { border-collapse: collapse; width: 100%; }
   th, td { border: 1px solid var(--line); text-align: center; }
   thead th {
@@ -663,6 +669,13 @@ function render() {
     });
   });
   tbl.appendChild(tbody);
+  updateHeaderOffset();
+}
+
+// keep the grid's available height in sync with the (wrapping) app header
+function updateHeaderOffset() {
+  var h = document.querySelector("header");
+  if (h) document.documentElement.style.setProperty("--header-h", Math.round(h.getBoundingClientRect().height) + "px");
 }
 
 /* ---------- modal plumbing ---------- */
@@ -1002,9 +1015,11 @@ document.getElementById("btn-help").addEventListener("click", helpModal);
 document.getElementById("btn-myhand").addEventListener("click", myHandModal);
 document.getElementById("btn-new").addEventListener("click", newGameModal);
 document.getElementById("notes").addEventListener("input", function (e) { state.notes = e.target.value; save(); });
+window.addEventListener("resize", updateHeaderOffset);
 
 load();
 render();
+updateHeaderOffset();
 </script>
 </body>
 </html>

@@ -15,8 +15,9 @@ aggiunge un **blocco appunti** libero — l'unica cosa che a Get a Clue manca.
 Un unico file `index.html` autonomo, nessuna dipendenza, funziona offline. Apribile dal telefono
 aprendo il file nel browser.
 
-- **Griglia** sospetti / armi / stanze × giocatori, intestazioni e prima colonna fisse
-  (scroll orizzontale), ottimizzata per il telefono (tap target grandi, dark mode automatica).
+- **Griglia** sospetti / armi / stanze × giocatori, ottimizzata per il telefono (tap target grandi,
+  dark mode automatica). Scorre dentro il proprio riquadro: la **riga dei nomi (intestazioni)** resta
+  fissa in alto scorrendo in verticale e la **prima colonna** resta fissa scorrendo in orizzontale.
 - **Marcatori per cella**: tap che cicla vuoto → ✗ (non ce l'ha) → ✓ (ce l'ha) → ? (forse) → vuoto.
 - **Deduzione automatica** (attivabile/disattivabile): quando segno ✓ a un giocatore, gli altri
   ricevono ✗ in automatico; una carta esclusa a *tutti* viene evidenziata come **SOLUZIONE**.
