@@ -1,0 +1,10 @@
+target/
+build/
+dist/
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.apk
+*.log
+ref/
