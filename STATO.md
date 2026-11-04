@@ -40,7 +40,10 @@ board-game-sheets/
 - **Detective Notes** (`./games/cluedo-detective-notes/`): MVP funzionante — singolo
   `index.html`, griglia sospetti/armi/stanze × giocatori con marcatori, deduzione automatica,
   gestione giocatori, blocco appunti, salvataggio locale, UI EN/IT. Sessione dedicata: `cluedo-notes`.
-  Nome pubblico neutro "Detective Notes" (cartella storica: `cluedo-detective-notes`).
+  Nome pubblico neutro "Detective Notes" (cartella storica: `cluedo-detective-notes`). Versione: v1.0.0.
+- **Ancient Wonders Scorepad** (`./games/ancient-wonders-scorepad/`): **in avvio** — segnapunti /
+  calcolatore di punteggio compatibile con 7 Wonders (nome pubblico neutro). Sessione dedicata appena
+  avviata. Voce nella home launcher da aggiungere a MVP pronto.
 
 ## Pubblicazione
 
