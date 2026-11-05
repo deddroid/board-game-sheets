@@ -41,10 +41,16 @@ board-game-sheets/
 
 - **Detective Notes** (`./games/cluedo-detective-notes/`, compatibile Cluedo): MVP funzionante —
   singolo `index.html`, griglia sospetti/armi/stanze × giocatori con marcatori, deduzione automatica,
-  gestione giocatori, edizioni, blocco appunti, tema, privacy, salvataggio locale, UI EN/IT. v1.0.0.
-  Sessione dedicata: `cluedo-detective` (sotto-sessione dell'hub, avviata il 06/11/2026 con brief
-  "test di attendibilità + ottimizzazione/semplificazione con latenze prima/dopo"). La precedente
-  `cluedo-notes` è archiviata (il suo lavoro è già nel monorepo).
+  gestione giocatori, edizioni, blocco appunti, tema, privacy, salvataggio locale, UI EN/IT.
+  **v1.0.1 (06/11/2026)**: passaggio "test di attendibilità + ottimizzazione" fatto dalla sessione
+  `cluedo-detective` — suite in-page che pilota la UI reale su tutte le 126 celle, deduzione,
+  giocatori, edizioni, persistenza (anche senza storage), layout 375/768/desktop, i18n; **7 bug
+  corretti** (i due seri: due ✓ sulla stessa carta ritiravano ✗ automatiche ancora valide; rimuovere
+  un giocatore con ✓ lasciava ✗ orfane → falsa SOLUZIONE; ora `reconcileAuto()` rideriva la riga);
+  refactor con griglia incrementale (`paintCard`), un solo listener delegato invece di 126, helper
+  DOM/modali/i18n centralizzati, codice morto rimosso. Latenze (mediane, 6 giocatori): tap su cella
+  **11,3 → 0,25 ms**, `render()` 12,4 → 1,7 ms, cambio lingua 13,3 → 9,5 ms; caricamento invariato
+  entro il rumore. Dettagli nel suo `STATO.md`. La precedente sessione `cluedo-notes` è archiviata.
 - **Ancient Wonders Scorepad** (`./games/ancient-wonders-scorepad/`, compatibile 7 Wonders): MVP
   completo (04/11/2026) — calcolatore 3–7 giocatori, 7 categorie, scienza calcolata dai simboli
   (jolly massimizzati), monete→punti, spareggio, EN/IT, tema, salvataggio locale. Presente nella home.
@@ -108,8 +114,8 @@ rendering: con decine di giochi il vantaggio del filtro a `hidden` cresce, quell
 ## Da fare
 
 - Aggiungere altri giochi su richiesta (una sessione per gioco), ognuno sotto `games/`.
-- Allineare `version`/`updated` di Detective Notes nella home quando `cluedo-detective` pubblica
-  (per 7 Wonders già fatto: home v1.0.2 mostra v1.0.1 · 2026-11-06).
+- Quando una sessione-gioco pubblica una nuova versione, l'hub allinea `version`/`updated` nella home
+  (fatto il 06/11/2026 per entrambi i giochi: home v1.0.3).
 
 ## Vincoli
 
