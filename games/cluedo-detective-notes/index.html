@@ -110,8 +110,6 @@
     border-radius: 9px; font-size: 17px;
   }
   header h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .toolbar { display: flex; align-items: center; gap: 6px; flex: none; }
-  header .spacer { flex: 1; }
   button {
     font: inherit; color: var(--ink); background: var(--panel);
     border: 1px solid var(--line-strong); border-radius: 8px;
@@ -152,7 +150,7 @@
     position: sticky; left: 0; z-index: 5; background: var(--panel);
     text-align: left; padding: 8px 8px; font-size: var(--card-font);
     min-width: var(--card-col); max-width: calc(var(--card-col) * 1.3);
-    line-height: 1.25;
+    line-height: 1.25; border-left: 4px solid var(--cat, var(--line));
   }
   tr.section-row th {
     position: sticky; left: 0; z-index: 6;
@@ -161,7 +159,6 @@
     text-align: left; padding: 7px 8px 7px 10px; font-weight: 800;
     border-left: 4px solid var(--cat, var(--line));
   }
-  td.card-cell { border-left: 4px solid var(--cat, var(--line)); }
   tr.cat-suspects { --cat: var(--cat-suspects); }
   tr.cat-weapons { --cat: var(--cat-weapons); }
   tr.cat-rooms { --cat: var(--cat-rooms); }
@@ -338,8 +335,8 @@ var STORE_KEY = "detective-notes:v1";
 var LANG_KEY = "detective-notes:lang";
 
 /* ---------- app version (bump on every published change) ---------- */
-var APP_VERSION = "1.0.0";
-var APP_DATE = "2026-11-01";
+var APP_VERSION = "1.0.1";
+var APP_DATE = "2026-11-06";
 
 /* Safe storage: localStorage may be unavailable (private mode, data: URLs).
    The app must still work in-memory; persistence is best-effort. */
@@ -362,9 +359,9 @@ var I18N = {
     playersTitle: "Players",
     playersHint: "List the players around the table. Mark which one is you.",
     addPlayer: "Add player",
-    me: "me", meFull: "This is me",
+    me: "me",
     player: "Player",
-    done: "Done", cancel: "Cancel", save: "Save",
+    done: "Done", cancel: "Cancel",
     // settings modal
     settingsTitle: "Settings",
     autoDeduce: "Auto-deduction",
@@ -393,7 +390,6 @@ var I18N = {
     builtin: "Built-in",
     custom: "Custom",
     cardsCount: "{s} suspects · {w} weapons · {r} rooms",
-    loadEdition: "Load",
     saveAsEdition: "Save current cards as edition…",
     editionNamePrompt: "Name for this edition:",
     switchEditionTitle: "Switch edition?",
@@ -445,9 +441,9 @@ var I18N = {
     playersTitle: "Giocatori",
     playersHint: "Elenca i giocatori al tavolo. Indica qual è il tuo.",
     addPlayer: "Aggiungi giocatore",
-    me: "io", meFull: "Questo sono io",
+    me: "io",
     player: "Giocatore",
-    done: "Fatto", cancel: "Annulla", save: "Salva",
+    done: "Fatto", cancel: "Annulla",
     settingsTitle: "Impostazioni",
     autoDeduce: "Deduzione automatica",
     autoDeduceHint: "Quando qualcuno è segnato ✓ per una carta, gli altri ricevono ✗ in automatico, e una carta esclusa a tutti viene segnalata come soluzione.",
@@ -473,7 +469,6 @@ var I18N = {
     builtin: "Predefinita",
     custom: "Personalizzata",
     cardsCount: "{s} sospetti · {w} armi · {r} stanze",
-    loadEdition: "Carica",
     saveAsEdition: "Salva le carte attuali come edizione…",
     editionNamePrompt: "Nome di questa edizione:",
     switchEditionTitle: "Cambiare edizione?",
@@ -543,6 +538,40 @@ function uid(p) { return p + Math.random().toString(36).slice(2, 9); }
 function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
 function fmt(s, o) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return o[k] != null ? o[k] : ""; }); }
 
+/* ---------- small DOM helpers (every dynamic piece of UI goes through these) ---------- */
+function el(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function btn(label, cls, onClick) {
+  var b = el("button", cls, label);
+  if (onClick) b.addEventListener("click", onClick);
+  return b;
+}
+function byId(id) { return document.getElementById(id); }
+function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
+// Segmented control shared by the language and theme pickers.
+function segmented(opts, current, onPick) {
+  var seg = el("div", "lang-toggle");
+  opts.forEach(function (o) {
+    var b = btn(o.label, o.v === current ? "on" : "", function () {
+      Array.prototype.forEach.call(seg.children, function (x) { x.classList.toggle("on", x === b); });
+      onPick(o.v);
+    });
+    seg.appendChild(b);
+  });
+  return seg;
+}
+// "Label ........ [control]" row used in the menu (language) and settings (theme).
+function labelRow(label, control) {
+  var row = el("div", "menu-lang");
+  row.appendChild(el("span", null, label));
+  row.appendChild(control);
+  return row;
+}
+
 /* ---------- editions (presets) ---------- */
 function presetName(p) { return typeof p.name === "string" ? p.name : (p.name[lang] || p.name.en); }
 function presetFlatCards(p) {
@@ -555,6 +584,24 @@ function allPresets() { return BUILTIN_PRESETS.concat(state.presets || []); }
 function activePreset() {
   return allPresets().filter(function (p) { return p.id === state.activePresetId; })[0] || null;
 }
+// {suspects: [names]} -> {suspects: [{id, name}]} (fresh ids)
+function cardsFromNames(flat) {
+  var cats = {};
+  CATS.forEach(function (c) {
+    cats[c] = (flat[c] || []).map(function (name) { return { id: uid("c"), name: name }; });
+  });
+  return cats;
+}
+// Replace the whole card set (new edition / reset): marks can't survive that.
+function replaceCards(flat, presetId) {
+  state.cards = cardsFromNames(flat);
+  state.marks = {};
+  state.auto = {};
+  state.activePresetId = presetId;
+  save();
+}
+function loadPresetCards(p) { replaceCards(presetFlatCards(p), p.id); }
+
 /* Switch UI language. The built-in edition ships its cards in both languages,
    so cards that still carry the old language's default name follow along
    (same ids: marks are untouched). Renamed cards and custom editions are
@@ -575,24 +622,8 @@ function setLang(l) {
   lang = l;
   lsSet(LANG_KEY, l);
 }
-function loadPresetCards(p) {
-  var flat = presetFlatCards(p);
-  var cats = {};
-  CATS.forEach(function (c) {
-    cats[c] = (flat[c] || []).map(function (name) { return { id: uid("c"), name: name }; });
-  });
-  state.cards = cats;
-  state.marks = {};
-  state.auto = {};
-  state.activePresetId = p.id;
-  save();
-}
 
 function defaultState() {
-  var cats = {};
-  CATS.forEach(function (c) {
-    cats[c] = DEFAULT_CARDS[lang][c].map(function (name) { return { id: uid("c"), name: name }; });
-  });
   return {
     version: 2,
     autoDeduce: true,
@@ -606,7 +637,7 @@ function defaultState() {
       for (var i = 2; i <= 6; i++) arr.push({ id: uid("p"), name: short + i, isMe: false });
       return arr;  // Cluedo seats up to 6; removing is quicker than adding
     })(),
-    cards: cats,
+    cards: cardsFromNames(DEFAULT_CARDS[lang]),
     marks: {},       // marks[cardId][playerId] = 'yes'|'no'|'maybe'
     auto: {},        // auto[cardId][playerId] = true  -> this 'no' was auto-derived from a 'yes'
     notes: ""
@@ -644,7 +675,7 @@ function applyTheme() {
 
 /* privacy cover (in-memory; a reload clears it) */
 function setPrivacy(on) {
-  var el = document.getElementById("privacy-screen");
+  var el = byId("privacy-screen");
   if (!el) return;
   if (on) el.removeAttribute("hidden"); else el.setAttribute("hidden", "");
 }
@@ -663,7 +694,7 @@ function availWidth() {
   return (main ? main.clientWidth : document.documentElement.clientWidth) - 26;  // main padding + frame border
 }
 function naturalGridWidth() {
-  var tbl = document.getElementById("grid");
+  var tbl = byId("grid");
   if (!tbl) return 0;
   var w = tbl.getBoundingClientRect().width, sc = state.uiScale || 1;
   return w > 0 ? w / sc : 0;  // width it would have at scale 1
@@ -690,6 +721,7 @@ function setMark(cardId, playerId, val) {
   else state.marks[cardId][playerId] = val;
 }
 var CYCLE = { "null": "no", "no": "yes", "yes": "maybe", "maybe": null };
+var SYMBOL = { yes: "✓", no: "✗", maybe: "?" };
 
 /* auto-derived 'no' tracking (so leaving a ✓ removes the ✗ it placed) */
 function isAuto(cardId, playerId) { return !!(state.auto[cardId] && state.auto[cardId][playerId]); }
@@ -723,14 +755,18 @@ function reconcileAuto(cardId) {
   });
 }
 
-function cycleCell(cardId, playerId) {
-  var cur = getMark(cardId, playerId);
-  var next = CYCLE[cur === null ? "null" : cur];
-  setAuto(cardId, playerId, false);          // a direct tap is a manual decision
-  setMark(cardId, playerId, next);
+// A manual decision on one cell (tap in the grid or tick in "My cards").
+function setCell(cardId, playerId, val) {
+  setAuto(cardId, playerId, false);
+  setMark(cardId, playerId, val);
   reconcileAuto(cardId);
   save();
-  render();
+}
+function cycleCell(cardId, playerId) {
+  var cur = getMark(cardId, playerId);
+  setCell(cardId, playerId, CYCLE[cur === null ? "null" : cur]);
+  if (!grid.rows[cardId]) render();            // row not on screen (shouldn't happen): full refresh
+  else if (paintCard(cardId)) fitIfOverflow();  // only this row changed; the SOLUTION flag can widen it
 }
 
 // a card is "solved" (in the envelope) if ruled out (no) for every player
@@ -739,85 +775,114 @@ function isSolved(cardId) {
   return state.players.every(function (p) { return getMark(cardId, p.id) === "no"; });
 }
 
-/* ---------- render grid ---------- */
-function render() {
-  applyTheme();
-  applyScale();
-  document.getElementById("app-title").textContent = t("title");
-  document.documentElement.lang = lang;
-  // static i18n labels
-  document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
-  document.querySelectorAll("[data-i18n-ph]").forEach(function (el) { el.placeholder = t(el.getAttribute("data-i18n-ph")); });
-  document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
-    var s = t(el.getAttribute("data-i18n-title"));
-    el.title = s; el.setAttribute("aria-label", s);
-  });
-  document.querySelectorAll("#lang-toggle button").forEach(function (b) {
-    b.classList.toggle("on", b.getAttribute("data-lang") === lang);
-  });
-  document.getElementById("notes").value = state.notes || "";
-  var ap = activePreset();
-  document.getElementById("edition-name").textContent = ap ? presetName(ap) : t("custom");
+/* ---------- grid ----------
+   The table is (re)built only when its shape changes: players, cards or
+   language. Marks are painted into the existing cells, so a tap touches
+   one row instead of rebuilding 126 cells. One click listener on the
+   table (event delegation) replaces one per cell. */
+var grid = { key: null, cells: {}, rows: {} };   // cells[cardId][playerId] = td ; rows[cardId] = {tr, cc, tag}
 
-  var tbl = document.getElementById("grid");
-  tbl.innerHTML = "";
+function gridKey() {
+  return lang + "|" +
+    state.players.map(function (p) { return p.id + ":" + p.name + ":" + (p.isMe ? 1 : 0); }).join(",") + "|" +
+    CATS.map(function (c) { return (state.cards[c] || []).map(function (x) { return x.id + ":" + x.name; }).join(","); }).join(";");
+}
 
-  // header
-  var thead = document.createElement("thead");
-  var hr = document.createElement("tr");
-  var corner = document.createElement("th");
-  corner.className = "card-head";
-  corner.textContent = "";
-  hr.appendChild(corner);
+function buildGrid() {
+  var tbl = byId("grid");
+  tbl.textContent = "";
+  grid.cells = {}; grid.rows = {};
+
+  var thead = el("thead"), hr = el("tr");
+  hr.appendChild(el("th", "card-head"));
   state.players.forEach(function (p) {
-    var th = document.createElement("th");
-    th.className = "player-head" + (p.isMe ? " me" : "");
-    var span = document.createElement("span");
-    span.className = "pname";
-    span.textContent = p.name + (p.isMe ? " ★" : "");
-    th.appendChild(span);
+    var th = el("th", "player-head" + (p.isMe ? " me" : ""));
+    th.appendChild(el("span", "pname", p.name + (p.isMe ? " ★" : "")));
     hr.appendChild(th);
   });
   thead.appendChild(hr);
   tbl.appendChild(thead);
 
-  var tbody = document.createElement("tbody");
+  var tbody = el("tbody");
   CATS.forEach(function (cat) {
-    var sr = document.createElement("tr");
-    sr.className = "section-row cat-" + cat;
-    var sth = document.createElement("th");
+    var sr = el("tr", "section-row cat-" + cat);
+    var sth = el("th", null, t(cat));
     sth.colSpan = state.players.length + 1;
-    sth.textContent = t(cat);
     sr.appendChild(sth);
     tbody.appendChild(sr);
 
     (state.cards[cat] || []).forEach(function (card) {
-      var tr = document.createElement("tr");
-      var solved = isSolved(card.id);
-      tr.className = "cat-" + cat + (solved ? " solved" : "");
-      var cc = document.createElement("td");
-      cc.className = "card-cell";
-      cc.textContent = card.name;
-      if (solved) {
-        var tag = document.createElement("span");
-        tag.className = "solvetag";
-        tag.textContent = " ◆ " + t("solution");
-        cc.appendChild(tag);
-      }
+      var tr = el("tr", "cat-" + cat);
+      var cc = el("td", "card-cell", card.name);
       tr.appendChild(cc);
-
+      var cells = grid.cells[card.id] = {};
       state.players.forEach(function (p) {
-        var td = document.createElement("td");
-        var mk = getMark(card.id, p.id);
-        td.className = "mark" + (mk ? " " + mk : "") + (p.isMe ? " col-me" : "");
-        td.textContent = mk === "yes" ? "✓" : mk === "no" ? "✗" : mk === "maybe" ? "?" : "";
-        td.addEventListener("click", function () { cycleCell(card.id, p.id); });
+        var td = el("td", "mark" + (p.isMe ? " col-me" : ""));
+        td.setAttribute("data-c", card.id);
+        td.setAttribute("data-p", p.id);
+        cells[p.id] = td;
         tr.appendChild(td);
       });
+      grid.rows[card.id] = { tr: tr, cc: cc, tag: null, solved: false };
       tbody.appendChild(tr);
+      paintCard(card.id);
     });
   });
   tbl.appendChild(tbody);
+}
+
+// Paint one card's row from state: cell marks + the SOLUTION flag.
+// Returns true when the solved flag flipped (the row's width may change).
+function paintCard(cardId) {
+  var r = grid.rows[cardId];
+  if (!r) return false;
+  state.players.forEach(function (p) {
+    var td = grid.cells[cardId][p.id];
+    if (!td) return;
+    var mk = getMark(cardId, p.id);
+    var cls = "mark" + (mk ? " " + mk : "") + (p.isMe ? " col-me" : "");
+    var sym = SYMBOL[mk] || "";
+    if (td.className !== cls) td.className = cls;
+    if (td.textContent !== sym) td.textContent = sym;
+  });
+  var solved = isSolved(cardId);
+  if (solved === r.solved) return false;
+  r.solved = solved;
+  r.tr.classList.toggle("solved", solved);
+  if (solved) {
+    r.tag = el("span", "solvetag", " ◆ " + t("solution"));
+    r.cc.appendChild(r.tag);
+  } else if (r.tag) {
+    r.cc.removeChild(r.tag);
+    r.tag = null;
+  }
+  return true;
+}
+
+function applyI18n() {
+  document.documentElement.lang = lang;
+  byId("app-title").textContent = t("title");
+  each("[data-i18n]", function (e) { e.textContent = t(e.getAttribute("data-i18n")); });
+  each("[data-i18n-ph]", function (e) { e.placeholder = t(e.getAttribute("data-i18n-ph")); });
+  each("[data-i18n-title]", function (e) {
+    var s = t(e.getAttribute("data-i18n-title"));
+    e.title = s; e.setAttribute("aria-label", s);
+  });
+}
+
+/* Full refresh of everything outside the modals. Cheap when the grid's
+   shape is unchanged (marks are repainted in place). */
+function render() {
+  applyTheme();
+  applyScale();
+  applyI18n();
+  byId("notes").value = state.notes || "";
+  var ap = activePreset();
+  byId("edition-name").textContent = ap ? presetName(ap) : t("custom");
+
+  var key = gridKey();
+  if (key !== grid.key) { buildGrid(); grid.key = key; }
+  else CATS.forEach(function (c) { (state.cards[c] || []).forEach(function (card) { paintCard(card.id); }); });
   updateHeaderOffset();
   fitIfOverflow();
 }
@@ -830,40 +895,66 @@ function updateHeaderOffset() {
 
 /* ---------- modal plumbing ---------- */
 function openModal(buildBody) {
-  var root = document.getElementById("modal-root");
-  var back = document.createElement("div");
-  back.className = "modal-back";
-  var modal = document.createElement("div");
-  modal.className = "modal";
+  var root = byId("modal-root");
+  var back = el("div", "modal-back");
+  var modal = el("div", "modal");
   back.appendChild(modal);
   back.addEventListener("click", function (e) { if (e.target === back) closeModal(); });
   root.appendChild(back);
   buildBody(modal);
 }
 function closeModal() {
-  var root = document.getElementById("modal-root");
-  root.innerHTML = "";
+  byId("modal-root").textContent = "";
   render();
+}
+function modalHead(m, title, hint) {
+  m.appendChild(el("h2", null, title));
+  if (hint) m.appendChild(el("p", "mini", hint));
+}
+// Bottom action bar; with no buttons given it is just the "Done" button.
+function actionBar(m, buttons) {
+  var a = el("div", "modal-actions");
+  (buttons || [btn(t("done"), "primary", closeModal)]).forEach(function (b) { a.appendChild(b); });
+  m.appendChild(a);
+}
+// Title + hint + Cancel/OK. Cancel closes (or runs onCancel); danger paints OK red.
+function confirmModal(title, hint, okLabel, onOk, onCancel, danger) {
+  openModal(function (m) {
+    modalHead(m, title, hint);
+    var ok = btn(okLabel, "primary" + (danger ? " danger" : ""), onOk);
+    if (danger) { ok.style.color = "#fff"; ok.style.background = "var(--no)"; ok.style.borderColor = "var(--no)"; }
+    actionBar(m, [btn(t("cancel"), "ghost", onCancel || closeModal), ok]);
+  });
 }
 
 /* ---------- players modal ---------- */
 function playersModal() {
   openModal(function (m) {
-    m.innerHTML = "<h2>" + t("playersTitle") + "</h2><p class='mini'>" + t("playersHint") + "</p>";
-    var list = document.createElement("div");
+    modalHead(m, t("playersTitle"), t("playersHint"));
+    var list = el("div");
     m.appendChild(list);
 
+    function removePlayer(p, idx) {
+      if (state.players.length <= 2) return;
+      // clean marks for this player; the ✗ its ✓ had derived on others go too
+      var owned = Object.keys(state.marks).filter(function (cid) { return state.marks[cid][p.id] === "yes"; });
+      Object.keys(state.marks).forEach(function (cid) { delete state.marks[cid][p.id]; });
+      Object.keys(state.auto).forEach(function (cid) { delete state.auto[cid][p.id]; });
+      state.players.splice(idx, 1);
+      owned.forEach(reconcileAuto);
+      if (!state.players.some(function (q) { return q.isMe; })) state.players[0].isMe = true;
+      save(); drawList();
+    }
+
     function drawList() {
-      list.innerHTML = "";
+      list.textContent = "";
       state.players.forEach(function (p, idx) {
-        var row = document.createElement("div");
-        row.className = "player-edit";
-        var inp = document.createElement("input");
+        var row = el("div", "player-edit");
+        var inp = el("input");
         inp.type = "text"; inp.value = p.name;
         inp.addEventListener("input", function () { p.name = inp.value; save(); });
-        var meLbl = document.createElement("label");
-        meLbl.className = "me-pick";
-        var meRadio = document.createElement("input");
+        var meLbl = el("label", "me-pick");
+        var meRadio = el("input");
         meRadio.type = "radio"; meRadio.name = "me-pick"; meRadio.checked = !!p.isMe;
         meRadio.addEventListener("change", function () {
           state.players.forEach(function (q) { q.isMe = false; });
@@ -871,147 +962,102 @@ function playersModal() {
         });
         meLbl.appendChild(meRadio);
         meLbl.appendChild(document.createTextNode(t("me")));
-        var del = document.createElement("button");
-        del.className = "del"; del.textContent = "✕";
+        var del = btn("✕", "del", function () { removePlayer(p, idx); });
         del.title = t("remove");
-        del.addEventListener("click", function () {
-          if (state.players.length <= 2) return;
-          // clean marks for this player; the ✗ its ✓ had derived on others go too
-          var owned = Object.keys(state.marks).filter(function (cid) { return state.marks[cid][p.id] === "yes"; });
-          Object.keys(state.marks).forEach(function (cid) { delete state.marks[cid][p.id]; });
-          Object.keys(state.auto).forEach(function (cid) { delete state.auto[cid][p.id]; });
-          state.players.splice(idx, 1);
-          owned.forEach(reconcileAuto);
-          if (!state.players.some(function (q) { return q.isMe; })) state.players[0].isMe = true;
-          save(); drawList();
-        });
         row.appendChild(inp); row.appendChild(meLbl); row.appendChild(del);
         list.appendChild(row);
       });
     }
     drawList();
 
-    var add = document.createElement("button");
-    add.className = "ghost"; add.style.marginTop = "10px"; add.textContent = "+ " + t("addPlayer");
-    add.addEventListener("click", function () {
+    var add = btn("+ " + t("addPlayer"), "ghost", function () {
       state.players.push({ id: uid("p"), name: t("player") + " " + (state.players.length + 1), isMe: false });
       save(); drawList();
     });
+    add.style.marginTop = "10px";
     m.appendChild(add);
-
-    var actions = document.createElement("div");
-    actions.className = "modal-actions";
-    var done = document.createElement("button");
-    done.className = "primary"; done.textContent = t("done");
-    done.addEventListener("click", closeModal);
-    actions.appendChild(done);
-    m.appendChild(actions);
+    actionBar(m);
   });
 }
 
-/* ---------- settings modal (cards + auto-deduction) ---------- */
+/* ---------- settings modal (theme, zoom, auto-deduction, cards) ---------- */
 function settingsModal() {
   openModal(function (m) {
-    m.innerHTML = "<h2>" + t("settingsTitle") + "</h2>";
+    modalHead(m, t("settingsTitle"));
 
     // theme: auto / light / dark
-    var thRow = document.createElement("div"); thRow.className = "menu-lang";
-    var thl = document.createElement("span"); thl.textContent = t("theme"); thRow.appendChild(thl);
-    var seg = document.createElement("div"); seg.className = "lang-toggle";
-    [["auto", "themeAuto"], ["light", "themeLight"], ["dark", "themeDark"]].forEach(function (pair) {
-      var b = document.createElement("button"); b.textContent = t(pair[1]);
-      if ((state.theme || "auto") === pair[0]) b.classList.add("on");
-      b.addEventListener("click", function () {
-        state.theme = pair[0]; save(); applyTheme();
-        seg.querySelectorAll("button").forEach(function (x) { x.classList.remove("on"); });
-        b.classList.add("on");
-      });
-      seg.appendChild(b);
-    });
-    thRow.appendChild(seg); m.appendChild(thRow);
+    m.appendChild(labelRow(t("theme"), segmented(
+      [{ v: "auto", label: t("themeAuto") }, { v: "light", label: t("themeLight") }, { v: "dark", label: t("themeDark") }],
+      state.theme || "auto",
+      function (v) { state.theme = v; save(); applyTheme(); }
+    )));
 
     // grid size (zoom to fit the screen width)
-    var szWrap = document.createElement("div"); szWrap.style.margin = "14px 0 2px";
-    var szl = document.createElement("div"); szl.textContent = t("gridSize"); szl.style.marginBottom = "6px";
-    var ctrl = document.createElement("div");
+    var szWrap = el("div"); szWrap.style.margin = "14px 0 2px";
+    var szl = el("div", null, t("gridSize")); szl.style.marginBottom = "6px";
+    var ctrl = el("div");
     ctrl.style.display = "flex"; ctrl.style.alignItems = "center"; ctrl.style.gap = "8px";
-    var minus = document.createElement("button"); minus.className = "icon"; minus.textContent = "−";
-    var val = document.createElement("span");
+    var val = el("span");
     val.style.minWidth = "52px"; val.style.textAlign = "center"; val.style.fontVariantNumeric = "tabular-nums";
     function showVal() { val.textContent = Math.round((state.uiScale || 1) * 100) + "%"; }
     showVal();
-    var plus = document.createElement("button"); plus.className = "icon"; plus.textContent = "+";
-    var fitBtn = document.createElement("button"); fitBtn.className = "ghost"; fitBtn.style.marginLeft = "auto"; fitBtn.textContent = t("fit");
-    minus.addEventListener("click", function () { setScale((state.uiScale || 1) - 0.1); showVal(); });
-    plus.addEventListener("click", function () { setScale((state.uiScale || 1) + 0.1); showVal(); });
-    fitBtn.addEventListener("click", function () { fitGrid(); showVal(); });
-    ctrl.appendChild(minus); ctrl.appendChild(val); ctrl.appendChild(plus); ctrl.appendChild(fitBtn);
+    var fitBtn = btn(t("fit"), "ghost", function () { fitGrid(); showVal(); });
+    fitBtn.style.marginLeft = "auto";
+    ctrl.appendChild(btn("−", "icon", function () { setScale((state.uiScale || 1) - 0.1); showVal(); }));
+    ctrl.appendChild(val);
+    ctrl.appendChild(btn("+", "icon", function () { setScale((state.uiScale || 1) + 0.1); showVal(); }));
+    ctrl.appendChild(fitBtn);
     szWrap.appendChild(szl); szWrap.appendChild(ctrl); m.appendChild(szWrap);
 
     // auto deduce toggle
-    var tog = document.createElement("div");
-    tog.className = "toggle-line";
-    var cb = document.createElement("input");
+    var tog = el("div", "toggle-line");
+    var cb = el("input");
     cb.type = "checkbox"; cb.checked = !!state.autoDeduce; cb.id = "ad";
     cb.addEventListener("change", function () { state.autoDeduce = cb.checked; save(); });
-    var lab = document.createElement("label");
+    var lab = el("label", null, t("autoDeduce"));
     lab.setAttribute("for", "ad"); lab.style.margin = "0"; lab.style.color = "var(--ink)";
-    lab.textContent = t("autoDeduce");
     tog.appendChild(cb); tog.appendChild(lab);
     m.appendChild(tog);
-    var adh = document.createElement("p"); adh.className = "mini"; adh.textContent = t("autoDeduceHint");
-    m.appendChild(adh);
+    m.appendChild(el("p", "mini", t("autoDeduceHint")));
 
     // cards editor
-    var ct = document.createElement("h2"); ct.style.fontSize = "16px"; ct.style.marginTop = "18px";
-    ct.textContent = t("cardsTitle"); m.appendChild(ct);
-    var ch = document.createElement("p"); ch.className = "mini"; ch.textContent = t("cardsHint"); m.appendChild(ch);
+    var ct = el("h2", null, t("cardsTitle")); ct.style.fontSize = "16px"; ct.style.marginTop = "18px";
+    m.appendChild(ct);
+    m.appendChild(el("p", "mini", t("cardsHint")));
 
     CATS.forEach(function (cat) {
-      var g = document.createElement("div"); g.className = "cards-group";
-      var h = document.createElement("h3"); h.textContent = t(cat); g.appendChild(h);
-      var wrap = document.createElement("div");
+      var g = el("div", "cards-group");
+      g.appendChild(el("h3", null, t(cat)));
+      var wrap = el("div");
       function drawCards() {
-        wrap.innerHTML = "";
+        wrap.textContent = "";
         state.cards[cat].forEach(function (card, i) {
-          var row = document.createElement("div"); row.className = "card-edit";
-          var inp = document.createElement("input"); inp.type = "text"; inp.value = card.name;
+          var row = el("div", "card-edit");
+          var inp = el("input"); inp.type = "text"; inp.value = card.name;
           inp.addEventListener("input", function () { card.name = inp.value; save(); });
-          var del = document.createElement("button"); del.className = "del danger"; del.textContent = "✕";
-          del.addEventListener("click", function () {
+          row.appendChild(inp);
+          row.appendChild(btn("✕", "del danger", function () {
             delete state.marks[card.id]; delete state.auto[card.id];
             state.cards[cat].splice(i, 1); save(); drawCards();
-          });
-          row.appendChild(inp); row.appendChild(del); wrap.appendChild(row);
+          }));
+          wrap.appendChild(row);
         });
       }
       drawCards();
       g.appendChild(wrap);
-      var add = document.createElement("button"); add.className = "ghost"; add.textContent = "+ " + t("addCard");
-      add.addEventListener("click", function () {
+      g.appendChild(btn("+ " + t("addCard"), "ghost", function () {
         state.cards[cat].push({ id: uid("c"), name: "" }); save(); drawCards();
-      });
-      g.appendChild(add);
+      }));
       m.appendChild(g);
     });
 
-    var reset = document.createElement("button");
-    reset.className = "ghost"; reset.style.marginTop = "6px"; reset.textContent = t("resetCards");
-    reset.addEventListener("click", function () {
-      var cats = {};
-      CATS.forEach(function (c) {
-        cats[c] = DEFAULT_CARDS[lang][c].map(function (name) { return { id: uid("c"), name: name }; });
-      });
-      state.cards = cats; state.marks = {}; state.auto = {};
-      state.activePresetId = "classic";   // the defaults ARE the built-in edition
-      save(); closeModal(); settingsModal();
+    var reset = btn(t("resetCards"), "ghost", function () {
+      replaceCards(DEFAULT_CARDS[lang], "classic");   // the defaults ARE the built-in edition
+      closeModal(); settingsModal();
     });
+    reset.style.marginTop = "6px";
     m.appendChild(reset);
-
-    var actions = document.createElement("div"); actions.className = "modal-actions";
-    var done = document.createElement("button"); done.className = "primary"; done.textContent = t("done");
-    done.addEventListener("click", closeModal);
-    actions.appendChild(done); m.appendChild(actions);
+    actionBar(m);
   });
 }
 
@@ -1019,109 +1065,79 @@ function settingsModal() {
 function myHandModal() {
   var me = state.players.filter(function (p) { return p.isMe; })[0];
   openModal(function (m) {
-    m.innerHTML = "<h2>" + t("myHandTitle") + "</h2>";
+    modalHead(m, t("myHandTitle"), me ? t("myHandHint") : null);
     if (!me) {
-      var p = document.createElement("p"); p.textContent = t("noMe"); m.appendChild(p);
-      var a = document.createElement("div"); a.className = "modal-actions";
-      var b = document.createElement("button"); b.className = "primary"; b.textContent = t("done");
-      b.addEventListener("click", closeModal); a.appendChild(b); m.appendChild(a);
+      m.appendChild(el("p", null, t("noMe")));
+      actionBar(m);
       return;
     }
-    var hint = document.createElement("p"); hint.className = "mini"; hint.textContent = t("myHandHint");
-    m.appendChild(hint);
     CATS.forEach(function (cat) {
-      var h = document.createElement("h3"); h.style.margin = "14px 0 6px"; h.style.fontSize = "13px";
-      h.style.textTransform = "uppercase"; h.style.color = "var(--muted)"; h.textContent = t(cat);
+      var h = el("h3", null, t(cat));
+      h.style.margin = "14px 0 6px"; h.style.fontSize = "13px";
+      h.style.textTransform = "uppercase"; h.style.color = "var(--muted)";
       m.appendChild(h);
-      var cl = document.createElement("div"); cl.className = "check-list";
+      var cl = el("div", "check-list");
       state.cards[cat].forEach(function (card) {
-        var lab = document.createElement("label");
-        var cb = document.createElement("input"); cb.type = "checkbox";
+        var lab = el("label");
+        var cb = el("input"); cb.type = "checkbox";
         cb.checked = getMark(card.id, me.id) === "yes";
-        cb.addEventListener("change", function () {
-          setAuto(card.id, me.id, false);
-          setMark(card.id, me.id, cb.checked ? "yes" : null);
-          reconcileAuto(card.id);
-          save();
-        });
+        cb.addEventListener("change", function () { setCell(card.id, me.id, cb.checked ? "yes" : null); });
         lab.appendChild(cb); lab.appendChild(document.createTextNode(card.name));
         cl.appendChild(lab);
       });
       m.appendChild(cl);
     });
-    var a = document.createElement("div"); a.className = "modal-actions";
-    var b = document.createElement("button"); b.className = "primary"; b.textContent = t("done");
-    b.addEventListener("click", closeModal); a.appendChild(b); m.appendChild(a);
+    actionBar(m);
   });
 }
 
 /* ---------- new game ---------- */
 function newGameModal() {
-  openModal(function (m) {
-    m.innerHTML = "<h2>" + t("newGameTitle") + "</h2><p class='mini'>" + t("newGameHint") + "</p>";
-    var a = document.createElement("div"); a.className = "modal-actions";
-    var cancel = document.createElement("button"); cancel.className = "ghost"; cancel.textContent = t("cancel");
-    cancel.addEventListener("click", closeModal);
-    var ok = document.createElement("button"); ok.className = "primary danger"; ok.style.color = "#fff";
-    ok.style.background = "var(--no)"; ok.style.borderColor = "var(--no)";
-    ok.textContent = t("clearMarks");
-    ok.addEventListener("click", function () { state.marks = {}; state.auto = {}; state.notes = ""; save(); closeModal(); });
-    a.appendChild(cancel); a.appendChild(ok); m.appendChild(a);
-  });
+  confirmModal(t("newGameTitle"), t("newGameHint"), t("clearMarks"), function () {
+    state.marks = {}; state.auto = {}; state.notes = ""; save(); closeModal();
+  }, null, true);
 }
 
 /* ---------- editions modal ---------- */
 function editionsModal() {
   openModal(function (m) {
-    m.innerHTML = "<h2>" + t("editionsTitle") + "</h2><p class='mini'>" + t("editionsHint") + "</p>";
-    var list = document.createElement("div"); list.className = "preset-list";
+    modalHead(m, t("editionsTitle"), t("editionsHint"));
+    var list = el("div", "preset-list");
 
     function confirmSwitch(p) {
       if (p.id === state.activePresetId) { closeModal(); return; }
-      openModal(function (mm) {
-        mm.innerHTML = "<h2>" + t("switchEditionTitle") + "</h2><p class='mini'>" +
-          fmt(t("switchEditionHint"), { name: presetName(p) }) + "</p>";
-        var a = document.createElement("div"); a.className = "modal-actions";
-        var c = document.createElement("button"); c.className = "ghost"; c.textContent = t("cancel");
-        c.addEventListener("click", function () { closeModal(); editionsModal(); });  // back to the list
-        var ok = document.createElement("button"); ok.className = "primary"; ok.textContent = t("loadAndClear");
-        ok.addEventListener("click", function () { loadPresetCards(p); closeModal(); });
-        a.appendChild(c); a.appendChild(ok); mm.appendChild(a);
-      });
+      confirmModal(t("switchEditionTitle"), fmt(t("switchEditionHint"), { name: presetName(p) }), t("loadAndClear"),
+        function () { loadPresetCards(p); closeModal(); },
+        function () { closeModal(); editionsModal(); });   // back to the list
     }
 
     function draw() {
-      list.innerHTML = "";
+      list.textContent = "";
       allPresets().forEach(function (p) {
         var flat = presetFlatCards(p) || {};
-        var item = document.createElement("div");
-        item.className = "preset-item" + (p.id === state.activePresetId ? " active" : "");
-        var main = document.createElement("div"); main.className = "pi-main"; main.style.cursor = "pointer";
-        var nm = document.createElement("div"); nm.className = "pi-name"; nm.textContent = presetName(p);
-        var sub = document.createElement("div"); sub.className = "pi-sub";
-        sub.textContent = (p.builtin ? t("builtin") : t("custom")) + " · " +
-          fmt(t("cardsCount"), { s: (flat.suspects || []).length, w: (flat.weapons || []).length, r: (flat.rooms || []).length });
-        main.appendChild(nm); main.appendChild(sub);
+        var isActive = p.id === state.activePresetId;
+        var item = el("div", "preset-item" + (isActive ? " active" : ""));
+        var main = el("div", "pi-main"); main.style.cursor = "pointer";
+        main.appendChild(el("div", "pi-name", presetName(p)));
+        main.appendChild(el("div", "pi-sub", (p.builtin ? t("builtin") : t("custom")) + " · " +
+          fmt(t("cardsCount"), { s: (flat.suspects || []).length, w: (flat.weapons || []).length, r: (flat.rooms || []).length })));
         main.addEventListener("click", function () { confirmSwitch(p); });
         item.appendChild(main);
-        if (p.id === state.activePresetId) {
-          var badge = document.createElement("span"); badge.className = "pi-badge"; badge.textContent = t("active");
-          item.appendChild(badge);
-        }
+        if (isActive) item.appendChild(el("span", "pi-badge", t("active")));
         if (!p.builtin) {
-          var ren = document.createElement("button"); ren.className = "pi-btn"; ren.textContent = "✎"; ren.title = t("rename");
-          ren.addEventListener("click", function (e) {
+          var ren = btn("✎", "pi-btn", function (e) {
             e.stopPropagation();
             var nn = prompt(t("editionNamePrompt"), presetName(p));
             if (nn && nn.trim()) { p.name = nn.trim(); save(); draw(); render(); }
           });
-          var del = document.createElement("button"); del.className = "pi-btn del"; del.textContent = "✕"; del.title = t("remove");
-          del.addEventListener("click", function (e) {
+          ren.title = t("rename");
+          var del = btn("✕", "pi-btn del", function (e) {
             e.stopPropagation();
             if (!confirm(t("deleteEditionConfirm"))) return;
             state.presets = state.presets.filter(function (x) { return x.id !== p.id; });
             save(); draw();
           });
+          del.title = t("remove");
           item.appendChild(ren); item.appendChild(del);
         }
         list.appendChild(item);
@@ -1130,10 +1146,7 @@ function editionsModal() {
     draw();
     m.appendChild(list);
 
-    var saveBtn = document.createElement("button");
-    saveBtn.className = "ghost"; saveBtn.style.width = "100%"; saveBtn.style.marginTop = "4px";
-    saveBtn.textContent = "＋ " + t("saveAsEdition");
-    saveBtn.addEventListener("click", function () {
+    var saveBtn = btn("＋ " + t("saveAsEdition"), "ghost", function () {
       var nn = prompt(t("editionNamePrompt"), "");
       if (!nn || !nn.trim()) return;
       var flat = {};
@@ -1141,65 +1154,45 @@ function editionsModal() {
       var p = { id: uid("e"), builtin: false, name: nn.trim(), cards: flat };
       state.presets.push(p); state.activePresetId = p.id; save(); draw();
     });
+    saveBtn.style.width = "100%"; saveBtn.style.marginTop = "4px";
     m.appendChild(saveBtn);
-
-    var actions = document.createElement("div"); actions.className = "modal-actions";
-    var done = document.createElement("button"); done.className = "primary"; done.textContent = t("done");
-    done.addEventListener("click", closeModal);
-    actions.appendChild(done); m.appendChild(actions);
+    actionBar(m);
   });
 }
 
 /* ---------- help / instructions modal ---------- */
 function helpModal() {
   var h = (I18N[lang] && I18N[lang].help) || I18N.en.help;
+  var li = function (s) { return "<li>" + s + "</li>"; };
+  var key = function (cls, sym, s) { return li("<span class='key " + cls + "'>" + sym + "</span> " + s); };
   openModal(function (m) {
-    var html = "<h2>" + t("helpTitle") + "</h2><div class='help-body'>";
-    html += "<p>" + h.intro + "</p>";
-    html += "<h3>" + h.rulesH + "</h3><ul>"
-      + "<li>" + h.rObj + "</li>"
-      + "<li>" + h.rSetup + "</li>"
-      + "<li>" + h.rTurn + "</li>"
-      + "<li>" + h.rShow + "</li>"
-      + "<li>" + h.rAccuse + "</li></ul>"
-      + "<p class='mini'>" + h.rNote + "</p>";
-    html += "<h3>" + h.gridH + "</h3><p>" + h.grid1 + "</p>";
-    html += "<ul>"
-      + "<li><span class='key no'>✗</span> " + h.mNo + "</li>"
-      + "<li><span class='key yes'>✓</span> " + h.mYes + "</li>"
-      + "<li><span class='key maybe'>?</span> " + h.mMaybe + "</li></ul>";
-    html += "<p>" + h.grid2 + "</p>";
-    html += "<h3>" + h.deduceH + "</h3><p>" + h.deduce1 + "</p>";
-    html += "<h3>" + h.handH + "</h3><p>" + h.hand1 + "</p>";
-    html += "<h3>" + h.editionsH + "</h3><p>" + h.editions1 + "</p>";
-    html += "<h3>" + h.notesH + "</h3><p>" + h.notes1 + "</p>";
-    html += "<h3>" + h.tipH + "</h3><ul><li>" + h.tip1 + "</li><li>" + h.tip2 + "</li><li>" + h.tip3 + "</li></ul>";
-    html += "</div>";
-    m.innerHTML = html;
-    var actions = document.createElement("div"); actions.className = "modal-actions";
-    var done = document.createElement("button"); done.className = "primary"; done.textContent = t("done");
-    done.addEventListener("click", closeModal);
-    actions.appendChild(done); m.appendChild(actions);
+    m.innerHTML = "<h2>" + t("helpTitle") + "</h2><div class='help-body'>"
+      + "<p>" + h.intro + "</p>"
+      + "<h3>" + h.rulesH + "</h3><ul>" + [h.rObj, h.rSetup, h.rTurn, h.rShow, h.rAccuse].map(li).join("") + "</ul>"
+      + "<p class='mini'>" + h.rNote + "</p>"
+      + "<h3>" + h.gridH + "</h3><p>" + h.grid1 + "</p>"
+      + "<ul>" + key("no", "✗", h.mNo) + key("yes", "✓", h.mYes) + key("maybe", "?", h.mMaybe) + "</ul>"
+      + "<p>" + h.grid2 + "</p>"
+      + "<h3>" + h.deduceH + "</h3><p>" + h.deduce1 + "</p>"
+      + "<h3>" + h.handH + "</h3><p>" + h.hand1 + "</p>"
+      + "<h3>" + h.editionsH + "</h3><p>" + h.editions1 + "</p>"
+      + "<h3>" + h.notesH + "</h3><p>" + h.notes1 + "</p>"
+      + "<h3>" + h.tipH + "</h3><ul>" + [h.tip1, h.tip2, h.tip3].map(li).join("") + "</ul>"
+      + "</div>";
+    actionBar(m);
   });
 }
 
 /* ---------- menu sheet (groups the not-often-used options) ---------- */
 function menuModal() {
   openModal(function (m) {
-    m.innerHTML = "<h2>" + t("menuTitle") + "</h2>";
+    modalHead(m, t("menuTitle"));
+    m.appendChild(labelRow(t("language"), segmented(
+      [{ v: "en", label: "EN" }, { v: "it", label: "IT" }], lang,
+      function (l) { setLang(l); closeModal(); menuModal(); }
+    )));
 
-    var langRow = document.createElement("div"); langRow.className = "menu-lang";
-    var ll = document.createElement("span"); ll.textContent = t("language"); langRow.appendChild(ll);
-    var lt = document.createElement("div"); lt.className = "lang-toggle";
-    ["en", "it"].forEach(function (l) {
-      var b = document.createElement("button"); b.textContent = l.toUpperCase();
-      if (l === lang) b.classList.add("on");
-      b.addEventListener("click", function () { setLang(l); closeModal(); menuModal(); });
-      lt.appendChild(b);
-    });
-    langRow.appendChild(lt); m.appendChild(langRow);
-
-    var list = document.createElement("div"); list.className = "menu-list";
+    var list = el("div", "menu-list");
     [
       { ico: "👥", label: t("playersTitle"), fn: playersModal },
       { ico: "🃏", label: t("editionsTitle"), fn: editionsModal },
@@ -1208,34 +1201,31 @@ function menuModal() {
       { ico: "❓", label: t("helpTitle"), fn: helpModal },
       { ico: "🔄", label: t("newGame"), fn: newGameModal }
     ].forEach(function (it) {
-      var b = document.createElement("button"); b.className = "menu-item";
-      b.innerHTML = "<span class='mi-ico'>" + it.ico + "</span>";
-      var sp = document.createElement("span"); sp.textContent = it.label; b.appendChild(sp);
-      b.addEventListener("click", function () { closeModal(); it.fn(); });
+      var b = btn(null, "menu-item", function () { closeModal(); it.fn(); });
+      b.appendChild(el("span", "mi-ico", it.ico));
+      b.appendChild(el("span", null, it.label));
       list.appendChild(b);
     });
     m.appendChild(list);
-
-    var actions = document.createElement("div"); actions.className = "modal-actions";
-    var done = document.createElement("button"); done.className = "primary"; done.textContent = t("done");
-    done.addEventListener("click", closeModal); actions.appendChild(done); m.appendChild(actions);
+    actionBar(m);
   });
 }
 
 /* ---------- wire up ---------- */
-document.getElementById("btn-menu").addEventListener("click", menuModal);
-document.getElementById("btn-edition-chip").addEventListener("click", editionsModal);
-document.getElementById("btn-privacy").addEventListener("click", function () { setPrivacy(true); });
-document.getElementById("ps-reveal").addEventListener("click", function () { setPrivacy(false); });
-document.getElementById("notes").addEventListener("input", function (e) { state.notes = e.target.value; save(); });
+byId("btn-menu").addEventListener("click", menuModal);
+byId("btn-edition-chip").addEventListener("click", editionsModal);
+byId("btn-privacy").addEventListener("click", function () { setPrivacy(true); });
+byId("ps-reveal").addEventListener("click", function () { setPrivacy(false); });
+byId("notes").addEventListener("input", function (e) { state.notes = e.target.value; save(); });
+byId("grid").addEventListener("click", function (e) {          // one listener for all cells
+  var td = e.target.closest ? e.target.closest("td.mark") : null;
+  if (td) cycleCell(td.getAttribute("data-c"), td.getAttribute("data-p"));
+});
 window.addEventListener("resize", function () { updateHeaderOffset(); fitIfOverflow(); });
 
 load();
 render();
-updateHeaderOffset();
-
-var _ver = document.getElementById("app-version");
-if (_ver) _ver.textContent = "v" + APP_VERSION + " · " + APP_DATE;
+byId("app-version").textContent = "v" + APP_VERSION + " · " + APP_DATE;
 </script>
 </body>
 </html>
