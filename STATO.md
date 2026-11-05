@@ -46,9 +46,14 @@ board-game-sheets/
   "test di attendibilità + ottimizzazione/semplificazione con latenze prima/dopo"). La precedente
   `cluedo-notes` è archiviata (il suo lavoro è già nel monorepo).
 - **Ancient Wonders Scorepad** (`./games/ancient-wonders-scorepad/`, compatibile 7 Wonders): MVP
-  completo v1.0.0 (04/11/2026) — calcolatore 3–7 giocatori, 7 categorie, scienza calcolata dai simboli
+  completo (04/11/2026) — calcolatore 3–7 giocatori, 7 categorie, scienza calcolata dai simboli
   (jolly massimizzati), monete→punti, spareggio, EN/IT, tema, salvataggio locale. Presente nella home.
-  Sessione dedicata: `wonders-scorepad` (sotto-sessione dell'hub, idle).
+  **v1.0.1 (06/11/2026)**: passaggio "test di attendibilità + ottimizzazione" fatto dalla sua sessione
+  su richiesta diretta dell'utente — 52 asserzioni OK (scienza verificata anche contro brute force),
+  refactor con tabella `CATS`, event delegation (4 listener invece di ~84), `paint()` incrementale,
+  salvataggio con debounce; latenze a 7 giocatori: render 7,1→5,1 ms, cambio lingua 6,2→4,4 ms,
+  evento input 0,47→0,17 ms. Dettagli nel suo `STATO.md`. Sessione dedicata: `wonders-scorepad`
+  (sotto-sessione dell'hub, idle).
 
 ## Pubblicazione
 
@@ -103,8 +108,8 @@ rendering: con decine di giochi il vantaggio del filtro a `hidden` cresce, quell
 ## Da fare
 
 - Aggiungere altri giochi su richiesta (una sessione per gioco), ognuno sotto `games/`.
-- Allineare `version`/`updated` di Detective Notes nella home quando `cluedo-detective` pubblica.
-- Stesso passaggio "test + ottimizzazione" per Ancient Wonders Scorepad, se richiesto.
+- Allineare `version`/`updated` di Detective Notes nella home quando `cluedo-detective` pubblica
+  (per 7 Wonders già fatto: home v1.0.2 mostra v1.0.1 · 2026-11-06).
 
 ## Vincoli
 
