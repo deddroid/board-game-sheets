@@ -1,6 +1,6 @@
 # Board Game HTML Suite — stato del progetto
 
-Aggiornato al 01/11/2026. Stato: in corso.
+Aggiornato al 06/11/2026. Stato: in corso.
 **Progetto madre**: raccoglie piccole app HTML per il foglio di gioco di vari giochi da tavolo.
 Ogni gioco è una sottocartella con il suo progetto e la sua sessione.
 
@@ -30,20 +30,25 @@ board-game-sheets/
 ├── README.md                        # bilingue
 ├── LICENSE                          # MIT
 ├── games/
-│   └── cluedo-detective-notes/      # storia git importata via subtree
+│   ├── cluedo-detective-notes/      # Detective Notes (storia git importata via subtree)
+│   │   └── index.html
+│   └── ancient-wonders-scorepad/    # Ancient Wonders Scorepad
 │       └── index.html
 └── STATO.md
 ```
 
 ## Giochi
 
-- **Detective Notes** (`./games/cluedo-detective-notes/`): MVP funzionante — singolo
-  `index.html`, griglia sospetti/armi/stanze × giocatori con marcatori, deduzione automatica,
-  gestione giocatori, blocco appunti, salvataggio locale, UI EN/IT. Sessione dedicata: `cluedo-notes`.
-  Nome pubblico neutro "Detective Notes" (cartella storica: `cluedo-detective-notes`). Versione: v1.0.0.
-- **Ancient Wonders Scorepad** (`./games/ancient-wonders-scorepad/`): **in avvio** — segnapunti /
-  calcolatore di punteggio compatibile con 7 Wonders (nome pubblico neutro). Sessione dedicata appena
-  avviata. Voce nella home launcher da aggiungere a MVP pronto.
+- **Detective Notes** (`./games/cluedo-detective-notes/`, compatibile Cluedo): MVP funzionante —
+  singolo `index.html`, griglia sospetti/armi/stanze × giocatori con marcatori, deduzione automatica,
+  gestione giocatori, edizioni, blocco appunti, tema, privacy, salvataggio locale, UI EN/IT. v1.0.0.
+  Sessione dedicata: `cluedo-detective` (sotto-sessione dell'hub, avviata il 06/11/2026 con brief
+  "test di attendibilità + ottimizzazione/semplificazione con latenze prima/dopo"). La precedente
+  `cluedo-notes` è archiviata (il suo lavoro è già nel monorepo).
+- **Ancient Wonders Scorepad** (`./games/ancient-wonders-scorepad/`, compatibile 7 Wonders): MVP
+  completo v1.0.0 (04/11/2026) — calcolatore 3–7 giocatori, 7 categorie, scienza calcolata dai simboli
+  (jolly massimizzati), monete→punti, spareggio, EN/IT, tema, salvataggio locale. Presente nella home.
+  Sessione dedicata: `wonders-scorepad` (sotto-sessione dell'hub, idle).
 
 ## Pubblicazione
 
@@ -52,9 +57,54 @@ board-game-sheets/
   - Home: https://deddroid.github.io/board-game-sheets/
   - Detective Notes: https://deddroid.github.io/board-game-sheets/games/cluedo-detective-notes/
 
+## Sessioni
+
+- **Hub (questa)**: chat principale del progetto; possiede la home `index.html`, `README.md`, `STATO.md`
+  della suite. Avvia una sotto-sessione per ogni gioco e aggiorna la voce nel launcher.
+- **Sotto-sessioni** (annidate sotto l'hub): `cluedo-detective` (Detective Notes), `wonders-scorepad`
+  (Ancient Wonders Scorepad). Ogni sessione tocca solo la propria cartella `games/<slug>/`.
+- Nota: l'app non permette di ri-annidare una sessione esistente sotto un altro genitore; per questo
+  la vecchia `cluedo-notes` (avviata da un'altra sessione) è rimasta archiviata e Cluedo ha una nuova
+  sotto-sessione.
+
+## Convenzione versioning
+
+- Ogni pagina gioco: `var APP_VERSION = "x.y.z"; var APP_DATE = "AAAA-MM-GG";` in cima allo script,
+  mostrati a piè di pagina come `vx.y.z · AAAA-MM-GG`. Si aggiornano a ogni modifica pubblicata
+  (PATCH fix/refactor interni, MINOR funzioni nuove, MAJOR cambi grossi).
+- Home: `SUITE_VERSION`/`SUITE_UPDATED` per il launcher; ogni voce di `GAMES` ha `version`/`updated`
+  che l'hub allinea quando una sessione-gioco pubblica una nuova versione.
+
+## Home / launcher — test e ottimizzazione (06/11/2026)
+
+Test funzionali (tutti superati, nel browser, da `file://` + viewport 375px): ricerca per titolo,
+descrizione, alias e compatibilità; insensibile a maiuscole/accenti e agli spazi; stato vuoto; pulsante
+×; EN/IT (testi, placeholder, `aria-pressed`, cambio lingua che conserva il filtro); badge versione e
+compatibilità; link verso file esistenti; nessun overflow orizzontale; nessun errore in console; nessuna
+stringa "undefined". `localStorage` indisponibile nello snapshot `data:` gestito senza errori.
+
+Refactor (v1.0.1, comportamento e aspetto invariati): card costruite una sola volta e filtro che
+alterna solo `hidden` (prima: `innerHTML` ricostruito a ogni tasto); stringa di ricerca normalizzata
+precalcolata per gioco; i18n centralizzata in `applyI18n()` (`data-i18n` + `data-i18n-ph`); storage
+centralizzato in `ls`; CSS `.has-value`/`display:none` sostituiti da `[hidden]`.
+
+Latenze (µs/operazione, mediana di 7 rep × 1000 op, stesso ambiente prima/dopo):
+
+| Operazione                       | Prima | Dopo | Δ      |
+|----------------------------------|------:|-----:|-------:|
+| `render()` completo              | 110   | 5,3  | −95 %  |
+| evento digitazione (con match)   | 258   | 221  | −14 %  |
+| digitazione senza risultati      | 162   | 146  | −10 %  |
+| cambio lingua                    | 75    | 83   | ≈ (rumore) |
+
+Il costo residuo della digitazione è il dispatch dell'evento + `normalize("NFD")` della query, non il
+rendering: con decine di giochi il vantaggio del filtro a `hidden` cresce, quello della lingua no.
+
 ## Da fare
 
 - Aggiungere altri giochi su richiesta (una sessione per gioco), ognuno sotto `games/`.
+- Allineare `version`/`updated` di Detective Notes nella home quando `cluedo-detective` pubblica.
+- Stesso passaggio "test + ottimizzazione" per Ancient Wonders Scorepad, se richiesto.
 
 ## Vincoli
 

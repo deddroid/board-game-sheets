@@ -24,6 +24,7 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0}
+  [hidden]{display:none !important}
   body{
     background:var(--bg); color:var(--fg);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -60,9 +61,8 @@
   .search .clear{
     position:absolute; right:8px; top:50%; transform:translateY(-50%);
     appearance:none; border:0; background:transparent; color:var(--muted);
-    font-size:1.3rem; line-height:1; padding:6px 8px; cursor:pointer; display:none;
+    font-size:1.3rem; line-height:1; padding:6px 8px; cursor:pointer;
   }
-  .search.has-value .clear{display:block}
 
   .games{list-style:none; margin:0; padding:0; display:grid; gap:12px}
   .game{
@@ -86,7 +86,7 @@
   .arrow{margin-left:auto; color:var(--muted); flex:none; font-size:1.2rem}
 
   .empty{
-    display:none; text-align:center; color:var(--muted); font-size:.95rem;
+    text-align:center; color:var(--muted); font-size:.95rem;
     padding:28px 12px; border:1px dashed var(--border); border-radius:14px;
   }
 
@@ -107,18 +107,18 @@
     </div>
   </header>
 
-  <div class="search" id="searchBox">
+  <div class="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
     <input type="text" id="search" autocomplete="off" spellcheck="false"
-           aria-label="Search games" placeholder="Search a game…">
-    <button type="button" class="clear" id="clear" aria-label="Clear">&times;</button>
+           aria-label="Search games" data-i18n-ph="search" placeholder="Search a game…">
+    <button type="button" class="clear" id="clear" aria-label="Clear" hidden>&times;</button>
   </div>
 
   <ul class="games" id="games"></ul>
-  <p class="empty" id="empty">Nothing found.</p>
+  <p class="empty" id="empty" data-i18n="empty" hidden>No game matches your search.</p>
 
   <footer>
     <span data-i18n="footer">Each sheet is a single HTML file — works offline, nothing to install.</span><br>
@@ -161,8 +161,8 @@ const GAMES = [
 ];
 
 // Suite version (the launcher itself) — bump when you change this page.
-const SUITE_VERSION = "1.0.0";
-const SUITE_UPDATED = "2026-11-01";
+const SUITE_VERSION = "1.0.1";
+const SUITE_UPDATED = "2026-11-06";
 
 const UI = {
   en: {
@@ -185,79 +185,89 @@ const UI = {
   }
 };
 
+// --- helpers ---
+const $ = id => document.getElementById(id);
+const norm = s => (s || "").toLowerCase()
+  .normalize("NFD").replace(/[̀-ͯ]/g, "");   // strip accents for matching
+// localStorage may be unavailable (private mode, file:/data: URLs): best-effort only.
+const ls = {
+  get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+const input = $("search"), list = $("games"), empty = $("empty"), clearBtn = $("clear");
 let lang = "en";
-const norm = s => (s||"").toLowerCase()
-  .normalize("NFD").replace(/[̀-ͯ]/g,"");  // strip accents for matching
 
-function getLang(){
-  try { const s = localStorage.getItem("bgs-lang"); if (s==="en"||s==="it") return s; } catch(e){}
-  return (navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en";
-}
-function setLang(next){
-  lang = next;
-  try { localStorage.setItem("bgs-lang", lang); } catch(e){}
+// Build every card once; filtering only toggles `hidden`, language only swaps text.
+const cards = GAMES.map(g => {
+  const a = document.createElement("a");
+  a.className = "game";
+  a.href = g.path;
+  a.innerHTML =
+    '<span class="emoji" aria-hidden="true">' + g.emoji + '</span>' +
+    '<span class="text">' +
+      '<span class="name-row"><span class="name"></span>' +
+        (g.compat ? '<span class="compat"></span>' : '') +
+      '</span>' +
+      '<span class="desc"></span>' +
+      (g.version ? '<span class="ver">v' + g.version + (g.updated ? ' · ' + g.updated : '') + '</span>' : '') +
+    '</span>' +
+    '<span class="arrow" aria-hidden="true">→</span>';
+  list.appendChild(a);
+  return {
+    g, el: a,
+    name: a.querySelector(".name"), desc: a.querySelector(".desc"), compat: a.querySelector(".compat"),
+    hay: norm([g.name.en, g.name.it, g.desc.en, g.desc.it, g.compat || "", (g.aka || []).join(" ")].join(" "))
+  };
+});
+
+function applyI18n(){
+  const s = UI[lang];
   document.documentElement.lang = lang;
-  document.querySelectorAll("[data-i18n]").forEach(el=>{
-    const k = el.getAttribute("data-i18n");
-    if (UI[lang][k]) el.textContent = UI[lang][k];
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = s[el.dataset.i18n]; });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = s[el.dataset.i18nPh]; });
+  document.querySelectorAll(".lang button").forEach(b => {
+    b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
   });
-  document.getElementById("search").placeholder = UI[lang].search;
-  document.getElementById("empty").textContent = UI[lang].empty;
-  document.querySelectorAll(".lang button").forEach(b=>{
-    b.setAttribute("aria-pressed", String(b.dataset.lang===lang));
+  cards.forEach(c => {
+    c.name.textContent = c.g.name[lang];
+    c.desc.textContent = c.g.desc[lang];
+    if (c.compat) c.compat.textContent = s.compat.replace("%s", c.g.compat);
   });
-  render();
-}
-
-function haystack(g){
-  return norm([
-    g.name.en, g.name.it, g.desc.en, g.desc.it, g.compat || "",
-    (g.aka||[]).join(" ")
-  ].join(" "));
 }
 
 function render(){
-  const q = norm(document.getElementById("search").value.trim());
-  const ul = document.getElementById("games");
-  ul.innerHTML = "";
+  const q = norm(input.value.trim());
   let shown = 0;
-  GAMES.forEach(g=>{
-    if (q && !haystack(g).includes(q)) return;
-    shown++;
-    const a = document.createElement("a");
-    a.className = "game";
-    a.href = g.path;
-    const compat = g.compat
-      ? '<span class="compat">'+UI[lang].compat.replace("%s", g.compat)+'</span>' : '';
-    const ver = g.version
-      ? '<span class="ver">v'+g.version+(g.updated ? ' · '+g.updated : '')+'</span>' : '';
-    a.innerHTML =
-      '<span class="emoji" aria-hidden="true">'+g.emoji+'</span>'+
-      '<span class="text">'+
-        '<span class="name-row"><span class="name">'+g.name[lang]+'</span>'+compat+'</span>'+
-        '<span class="desc">'+g.desc[lang]+'</span>'+
-        ver+
-      '</span>'+
-      '<span class="arrow" aria-hidden="true">→</span>';
-    ul.appendChild(a);
+  cards.forEach(c => {
+    const hit = !q || c.hay.includes(q);
+    c.el.hidden = !hit;
+    if (hit) shown++;
   });
-  document.getElementById("empty").style.display = shown ? "none" : "block";
+  empty.hidden = shown > 0;
+  clearBtn.hidden = !input.value;
 }
 
-const input = document.getElementById("search");
-const box = document.getElementById("searchBox");
-input.addEventListener("input", ()=>{
-  box.classList.toggle("has-value", input.value.length>0);
-  render();
+function getLang(){
+  const s = ls.get("bgs-lang");
+  if (s === "en" || s === "it") return s;
+  return (navigator.language || "en").toLowerCase().startsWith("it") ? "it" : "en";
+}
+function setLang(next){
+  lang = next;
+  ls.set("bgs-lang", lang);
+  applyI18n();
+}
+
+input.addEventListener("input", render);
+clearBtn.addEventListener("click", () => { input.value = ""; render(); input.focus(); });
+document.querySelectorAll(".lang button").forEach(b => {
+  b.addEventListener("click", () => setLang(b.dataset.lang));
 });
-document.getElementById("clear").addEventListener("click", ()=>{
-  input.value = ""; box.classList.remove("has-value"); input.focus(); render();
-});
-document.querySelectorAll(".lang button").forEach(b=>{
-  b.addEventListener("click", ()=>setLang(b.dataset.lang));
-});
+
 setLang(getLang());
-document.getElementById("suiteVer").textContent = "Suite v" + SUITE_VERSION + " · " + SUITE_UPDATED;
+render();
+$("suiteVer").textContent = "Suite v" + SUITE_VERSION + " · " + SUITE_UPDATED;
 </script>
 </body>
 </html>
