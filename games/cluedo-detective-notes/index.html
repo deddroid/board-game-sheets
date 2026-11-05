@@ -287,9 +287,9 @@
     <span class="logo">🔍</span>
     <h1 id="app-title">Detective Notes</h1>
   </div>
-  <button id="btn-edition-chip" class="chip" title="Editions">🃏 <b id="edition-name">Classic</b></button>
-  <button class="icon" id="btn-privacy" title="Privacy" aria-label="Privacy">🙈</button>
-  <button class="icon" id="btn-menu" title="Menu" aria-label="Menu">☰</button>
+  <button id="btn-edition-chip" class="chip" title="Editions" data-i18n-title="editionsTitle">🃏 <b id="edition-name">Classic</b></button>
+  <button class="icon" id="btn-privacy" title="Privacy" aria-label="Privacy" data-i18n-title="privacy">🙈</button>
+  <button class="icon" id="btn-menu" title="Menu" aria-label="Menu" data-i18n-title="menuTitle">☰</button>
 </header>
 
 <main>
@@ -386,7 +386,7 @@ var I18N = {
     menuTitle: "Menu",
     theme: "Theme", themeAuto: "Auto", themeLight: "Light", themeDark: "Dark",
     gridSize: "Grid size", fit: "Fit",
-    privacyTitle: "Content hidden", privacySub: "So nobody can read your sheet or notes.", reveal: "Reveal",
+    privacy: "Privacy", privacyTitle: "Content hidden", privacySub: "So nobody can read your sheet or notes.", reveal: "Reveal",
     // editions
     editionsTitle: "Editions",
     editionsHint: "Each edition is a named set of suspects, weapons and rooms. Pick one to load it onto the sheet.",
@@ -466,7 +466,7 @@ var I18N = {
     menuTitle: "Menu",
     theme: "Tema", themeAuto: "Auto", themeLight: "Chiaro", themeDark: "Scuro",
     gridSize: "Dimensione griglia", fit: "Adatta",
-    privacyTitle: "Contenuto nascosto", privacySub: "Così nessuno può leggere il foglio o gli appunti.", reveal: "Mostra",
+    privacy: "Privacy", privacyTitle: "Contenuto nascosto", privacySub: "Così nessuno può leggere il foglio o gli appunti.", reveal: "Mostra",
     // editions
     editionsTitle: "Edizioni",
     editionsHint: "Ogni edizione è un insieme di sospetti, armi e stanze con un nome. Scegline una per caricarla sul foglio.",
@@ -554,6 +554,26 @@ function presetFlatCards(p) {
 function allPresets() { return BUILTIN_PRESETS.concat(state.presets || []); }
 function activePreset() {
   return allPresets().filter(function (p) { return p.id === state.activePresetId; })[0] || null;
+}
+/* Switch UI language. The built-in edition ships its cards in both languages,
+   so cards that still carry the old language's default name follow along
+   (same ids: marks are untouched). Renamed cards and custom editions are
+   left as the user wrote them. */
+function setLang(l) {
+  if (l === lang || !I18N[l]) return;
+  var ap = activePreset();
+  if (ap && ap.builtin && ap.cards[lang] && ap.cards[l]) {
+    CATS.forEach(function (c) {
+      var from = ap.cards[lang][c] || [], to = ap.cards[l][c] || [];
+      (state.cards[c] || []).forEach(function (card) {
+        var i = from.indexOf(card.name);
+        if (i >= 0 && to[i]) card.name = to[i];
+      });
+    });
+    save();
+  }
+  lang = l;
+  lsSet(LANG_KEY, l);
 }
 function loadPresetCards(p) {
   var flat = presetFlatCards(p);
@@ -678,21 +698,27 @@ function setAuto(cardId, playerId, v) {
   else if (state.auto[cardId]) { delete state.auto[cardId][playerId]; }
 }
 
-// one owner known -> everyone else doesn't have it (only fill blanks, flag as auto)
-function cascadeYes(cardId, ownerId) {
+// Re-derive the automatic ✗ of one card from its current ✓ owner(s):
+// drop every ✗ this app placed, then fill the blanks of the non-owners
+// again. Manual marks are never touched. Recomputing (instead of
+// cascading/uncascading around the tapped cell) keeps the row right when
+// a card has two ✓, when one of them is removed, or when a ✓ owner leaves
+// the table. No-op while auto-deduction is off.
+function reconcileAuto(cardId) {
+  if (!state.autoDeduce) return;
+  var hasOwner = false;
   state.players.forEach(function (p) {
-    if (p.id !== ownerId && getMark(cardId, p.id) === null) {
+    if (isAuto(cardId, p.id)) {
+      if (getMark(cardId, p.id) === "no") setMark(cardId, p.id, null);
+      setAuto(cardId, p.id, false);
+    }
+    if (getMark(cardId, p.id) === "yes") hasOwner = true;
+  });
+  if (!hasOwner) return;
+  state.players.forEach(function (p) {
+    if (getMark(cardId, p.id) === null) {
       setMark(cardId, p.id, "no");
       setAuto(cardId, p.id, true);
-    }
-  });
-}
-// leaving a ✓ -> remove only the ✗ that this app placed automatically
-function uncascade(cardId, ownerId) {
-  state.players.forEach(function (p) {
-    if (p.id !== ownerId && isAuto(cardId, p.id) && getMark(cardId, p.id) === "no") {
-      setMark(cardId, p.id, null);
-      setAuto(cardId, p.id, false);
     }
   });
 }
@@ -702,8 +728,7 @@ function cycleCell(cardId, playerId) {
   var next = CYCLE[cur === null ? "null" : cur];
   setAuto(cardId, playerId, false);          // a direct tap is a manual decision
   setMark(cardId, playerId, next);
-  if (state.autoDeduce && cur === "yes" && next !== "yes") uncascade(cardId, playerId);
-  if (state.autoDeduce && next === "yes") cascadeYes(cardId, playerId);
+  reconcileAuto(cardId);
   save();
   render();
 }
@@ -723,6 +748,10 @@ function render() {
   // static i18n labels
   document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
   document.querySelectorAll("[data-i18n-ph]").forEach(function (el) { el.placeholder = t(el.getAttribute("data-i18n-ph")); });
+  document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+    var s = t(el.getAttribute("data-i18n-title"));
+    el.title = s; el.setAttribute("aria-label", s);
+  });
   document.querySelectorAll("#lang-toggle button").forEach(function (b) {
     b.classList.toggle("on", b.getAttribute("data-lang") === lang);
   });
@@ -844,13 +873,15 @@ function playersModal() {
         meLbl.appendChild(document.createTextNode(t("me")));
         var del = document.createElement("button");
         del.className = "del"; del.textContent = "✕";
-        del.title = "remove";
+        del.title = t("remove");
         del.addEventListener("click", function () {
           if (state.players.length <= 2) return;
-          // clean marks for this player
+          // clean marks for this player; the ✗ its ✓ had derived on others go too
+          var owned = Object.keys(state.marks).filter(function (cid) { return state.marks[cid][p.id] === "yes"; });
           Object.keys(state.marks).forEach(function (cid) { delete state.marks[cid][p.id]; });
           Object.keys(state.auto).forEach(function (cid) { delete state.auto[cid][p.id]; });
           state.players.splice(idx, 1);
+          owned.forEach(reconcileAuto);
           if (!state.players.some(function (q) { return q.isMe; })) state.players[0].isMe = true;
           save(); drawList();
         });
@@ -948,7 +979,7 @@ function settingsModal() {
           inp.addEventListener("input", function () { card.name = inp.value; save(); });
           var del = document.createElement("button"); del.className = "del danger"; del.textContent = "✕";
           del.addEventListener("click", function () {
-            delete state.marks[card.id];
+            delete state.marks[card.id]; delete state.auto[card.id];
             state.cards[cat].splice(i, 1); save(); drawCards();
           });
           row.appendChild(inp); row.appendChild(del); wrap.appendChild(row);
@@ -971,7 +1002,9 @@ function settingsModal() {
       CATS.forEach(function (c) {
         cats[c] = DEFAULT_CARDS[lang][c].map(function (name) { return { id: uid("c"), name: name }; });
       });
-      state.cards = cats; state.marks = {}; state.auto = {}; save(); closeModal(); settingsModal();
+      state.cards = cats; state.marks = {}; state.auto = {};
+      state.activePresetId = "classic";   // the defaults ARE the built-in edition
+      save(); closeModal(); settingsModal();
     });
     m.appendChild(reset);
 
@@ -1007,13 +1040,8 @@ function myHandModal() {
         cb.checked = getMark(card.id, me.id) === "yes";
         cb.addEventListener("change", function () {
           setAuto(card.id, me.id, false);
-          if (cb.checked) {
-            setMark(card.id, me.id, "yes");
-            if (state.autoDeduce) cascadeYes(card.id, me.id);
-          } else {
-            setMark(card.id, me.id, null);
-            if (state.autoDeduce) uncascade(card.id, me.id);
-          }
+          setMark(card.id, me.id, cb.checked ? "yes" : null);
+          reconcileAuto(card.id);
           save();
         });
         lab.appendChild(cb); lab.appendChild(document.createTextNode(card.name));
@@ -1055,7 +1083,7 @@ function editionsModal() {
           fmt(t("switchEditionHint"), { name: presetName(p) }) + "</p>";
         var a = document.createElement("div"); a.className = "modal-actions";
         var c = document.createElement("button"); c.className = "ghost"; c.textContent = t("cancel");
-        c.addEventListener("click", closeModal);
+        c.addEventListener("click", function () { closeModal(); editionsModal(); });  // back to the list
         var ok = document.createElement("button"); ok.className = "primary"; ok.textContent = t("loadAndClear");
         ok.addEventListener("click", function () { loadPresetCards(p); closeModal(); });
         a.appendChild(c); a.appendChild(ok); mm.appendChild(a);
@@ -1166,7 +1194,7 @@ function menuModal() {
     ["en", "it"].forEach(function (l) {
       var b = document.createElement("button"); b.textContent = l.toUpperCase();
       if (l === lang) b.classList.add("on");
-      b.addEventListener("click", function () { lang = l; lsSet(LANG_KEY, l); closeModal(); menuModal(); });
+      b.addEventListener("click", function () { setLang(l); closeModal(); menuModal(); });
       lt.appendChild(b);
     });
     langRow.appendChild(lt); m.appendChild(langRow);
