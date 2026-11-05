@@ -1,6 +1,6 @@
 # Ancient Wonders Scorepad — stato
 
-Aggiornato al 04/11/2026. Stato: **MVP completo** (v1.0.0) — committato su `main`.
+Aggiornato al 06/11/2026. Stato: **MVP completo e rifattorizzato** (v1.0.1) — committato su `main`.
 
 ## Cosa è
 
@@ -51,6 +51,24 @@ titolo, logo o grafica.
 - EN/IT con default dalla lingua del browser, scelta ricordata; toggle tema chiaro/scuro
   (oltre a `prefers-color-scheme`). Versione visibile a piè di pagina `v1.0.0 · 2026-11-04`.
 - Nota clean-room / disclaimer a piè di pagina (EN+IT).
+
+## v1.0.1 (06/11/2026) — revisione, test, ottimizzazione
+
+- Test funzionali completi eseguiti da `localhost` (52 asserzioni, tutte OK): limiti
+  giocatori, parsing input (segno, testo spurio, clamp ±999), tutte le categorie,
+  scienza (11 casi noti + 200 casuali vs brute force), spareggio, rank condivisi in
+  parità, reset, EN/IT (anche aria-label), tema, persistenza dopo reload, stato
+  corrotto/non-JSON tollerato, nomi con HTML neutralizzati.
+- Refactor: categorie in un'unica tabella `CATS` (ordine, colore, i18n, tipo derivati
+  per convenzione); card renderizzate da template; **event delegation** (4 listener
+  totali invece di ~84); nodi DOM cachati in `views[]`, `paint()` aggiorna solo i
+  numeri; `standings()` pura (rank condivisi: 1,1,3); un solo parser `parseField`;
+  salvataggio con debounce 150 ms + flush su `pagehide`/`visibilitychange`.
+- UX: pulsante **±** sul militare (la tastiera numerica iOS non ha il meno); al blur
+  il campo mostra il valore realmente memorizzato; tap su un campo lo seleziona tutto.
+- Latenze (7 giocatori): render 7,1→5,1 ms; cambio lingua 6,2→4,4 ms; evento input
+  0,47→0,17 ms; input nome 0,22→0,02 ms. Righe 678→602.
+- `window.AWS` espone le funzioni pure di punteggio per verifiche da console.
 
 ## Idee future (non MVP)
 

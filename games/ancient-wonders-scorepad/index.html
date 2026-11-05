@@ -16,10 +16,9 @@
     --line-strong: #b9bec9;
     --accent: #b8860b;          /* antique gold */
     --accent-ink: #ffffff;
-    --win-bg: #fff8d6;
     --win-line: #f1d472;
     --field: #ffffff;
-    /* category colours (generic, non-trademarked) */
+    /* category colours (generic, non-trademarked); keys match CATS in the script */
     --c-military: #c92a2a;
     --c-coins: #b8860b;
     --c-wonder: #6b4f9e;
@@ -41,7 +40,6 @@
       --line-strong: #3a4354;
       --accent: #d9a62e;
       --accent-ink: #1a1f29;
-      --win-bg: #3a330f;
       --win-line: #6d5e1b;
       --field: #0f131a;
       --c-military: #ff6b6b;
@@ -63,7 +61,6 @@
     --line-strong: #3a4354;
     --accent: #d9a62e;
     --accent-ink: #1a1f29;
-    --win-bg: #3a330f;
     --win-line: #6d5e1b;
     --field: #0f131a;
     --c-military: #ff6b6b;
@@ -87,7 +84,7 @@
     background: var(--panel);
     border-bottom: 1px solid var(--line);
     padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top));
-    display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
+    display: flex; align-items: center; gap: 8px;
   }
   .brand { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; }
   .brand .logo {
@@ -107,8 +104,9 @@
   button:active { transform: translateY(1px); }
   button.icon { min-width: 42px; min-height: 42px; padding: 8px; font-size: 17px; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.pm { min-width: 36px; min-height: 36px; padding: 4px 8px; font-size: 15px; color: var(--muted); }
   .lang-toggle { display: flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
-  .lang-toggle button { border: 0; border-radius: 0; padding: 8px 10px; min-height: 40px; background: transparent; color: var(--muted); min-width: 40px; }
+  .lang-toggle button { border: 0; border-radius: 0; padding: 8px 10px; min-height: 40px; min-width: 40px; background: transparent; color: var(--muted); }
   .lang-toggle button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 
   main { max-width: 760px; margin: 0 auto; padding: 14px 12px 0; }
@@ -123,6 +121,14 @@
   .count { display: flex; align-items: center; gap: 8px; }
   .count .n { min-width: 2ch; text-align: center; font-weight: 700; font-size: 18px; }
   .controls .spacer { flex: 1 1 auto; }
+
+  /* numeric fields (category inputs and science symbol counts share one style) */
+  .num {
+    width: 72px; text-align: center; font: inherit; font-size: 16px; font-weight: 600;
+    background: var(--field); color: var(--ink);
+    border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 6px; min-height: var(--tap);
+  }
+  .num:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
   .player {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
@@ -143,11 +149,11 @@
     background: transparent; border: 0; border-bottom: 1px dashed transparent; color: var(--ink); padding: 4px 2px;
   }
   .p-name:focus { outline: none; border-bottom-color: var(--accent); }
+  .win-tag { font-size: 11px; color: var(--accent); font-weight: 700; white-space: nowrap; }
   .p-total { flex: none; text-align: right; }
-  .p-total .num { font-size: 26px; font-weight: 800; line-height: 1; }
+  .p-total .tot { font-size: 26px; font-weight: 800; line-height: 1; }
   .p-total .lab { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
-  .player.win .p-total .num { color: var(--accent); }
-  .win-tag { font-size: 11px; color: var(--accent); font-weight: 700; margin-left: 2px; }
+  .player.win .p-total .tot { color: var(--accent); }
 
   .cats { padding: 6px 12px 12px; }
   .cat {
@@ -160,26 +166,18 @@
   .cat .name { font-size: 14px; }
   .cat .sub { display: block; font-size: 11px; color: var(--muted); }
   .cat .right { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
-  .cat input.num {
-    width: 72px; text-align: center; font: inherit; font-size: 16px; font-weight: 600;
-    background: var(--field); color: var(--ink);
-    border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 6px; min-height: var(--tap);
-  }
-  .cat input.num:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   .cat .pts { min-width: 48px; text-align: right; font-weight: 700; font-size: 15px; }
   .cat .pts .u { font-size: 11px; color: var(--muted); font-weight: 400; }
 
-  /* science sub-grid */
+  /* science: symbol counts in a sub-grid, computed points below */
   .sci { grid-template-columns: 1fr; align-items: stretch; }
-  .sci .sci-inputs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-  .sci .field { flex: 1 1 60px; min-width: 60px; }
-  .sci .field .flab { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
-  .sci .field .sym { font-size: 14px; }
-  .sci .field input { width: 100%; text-align: center; font: inherit; font-size: 16px; font-weight: 600;
-    background: var(--field); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 4px; min-height: var(--tap); }
-  .sci .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  .sci .sci-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; font-size: 13px; color: var(--muted); }
-  .sci .sci-total b { color: var(--c-science); font-size: 16px; }
+  .sci-inputs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .sci .field { flex: 1 1 60px; min-width: 60px; display: block; }
+  .sci .flab { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+  .sci .sym { font-size: 14px; }
+  .sci .num { width: 100%; padding: 8px 4px; }
+  .sci-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .sci-total b { color: var(--c-science); font-size: 16px; }
 
   .mini { color: var(--muted); font-size: 12px; }
   footer { max-width: 760px; margin: 0 auto; padding: 18px 12px 0; }
@@ -204,8 +202,8 @@
     </div>
   </div>
   <div class="toolbar">
-    <button class="icon" id="theme-btn" title="Theme" aria-label="Theme">🌓</button>
-    <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Language">
+    <button class="icon" id="theme-btn" data-i18n-title="theme" data-i18n-aria="theme">🌓</button>
+    <div class="lang-toggle" id="lang-toggle" role="group" aria-label="Language / Lingua">
       <button data-lang="en">EN</button>
       <button data-lang="it">IT</button>
     </div>
@@ -217,9 +215,9 @@
     <div class="grp">
       <label data-i18n="playersLabel">Players</label>
       <div class="count">
-        <button class="icon" id="minus" aria-label="Remove player">−</button>
+        <button class="icon" id="minus" data-i18n-aria="removePlayer">−</button>
         <span class="n" id="count">4</span>
-        <button class="icon" id="plus" aria-label="Add player">+</button>
+        <button class="icon" id="plus" data-i18n-aria="addPlayer">+</button>
       </div>
     </div>
     <div class="spacer"></div>
@@ -231,7 +229,7 @@
 
 <footer>
   <p class="mini" data-i18n="tiebreak">Tie on total points? The player with more coins wins. The leader is highlighted.</p>
-  <p class="mini" id="disclaimer" data-i18n="disclaimer">Unofficial fan-made tool. Game names are trademarks of their respective owners; used only to describe compatibility.</p>
+  <p class="mini" data-i18n="disclaimer">Unofficial fan-made tool. Game names are trademarks of their respective owners; used only to describe compatibility.</p>
   <p class="mini" data-i18n="offline">Offline — everything is saved on this device only.</p>
   <p class="ver" id="ver"></p>
 </footer>
@@ -253,12 +251,11 @@
    or official sheet layout are used; "7 Wonders" appears only as a nominative
    compatibility label. State persisted in localStorage (best-effort). */
 
-var APP_VERSION = "1.0.0";
-var APP_DATE = "2026-11-04";
+var APP_VERSION = "1.0.1";
+var APP_DATE = "2026-11-06";
 
-var STATE_KEY = "ancient-wonders-scorepad:state";
-var LANG_KEY = "ancient-wonders-scorepad:lang";
-var THEME_KEY = "ancient-wonders-scorepad:theme";
+var NS = "ancient-wonders-scorepad:";
+var STATE_KEY = NS + "state", LANG_KEY = NS + "lang", THEME_KEY = NS + "theme";
 
 /* ---------- safe storage ---------- */
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -270,10 +267,14 @@ var I18N = {
     appTitle: "Ancient Wonders Scorepad",
     compat: "Score calculator for 7 Wonders (base game)",
     playersLabel: "Players",
+    addPlayer: "Add player",
+    removePlayer: "Remove player",
+    theme: "Light / dark theme",
     newGame: "New game",
     total: "Total",
     winner: "Leader",
     playerName: "Player {n}",
+    flipSign: "Flip sign",
     cMilitary: "Military",
     cMilitarySub: "Conflict tokens, total (can be negative)",
     cCoins: "Treasury",
@@ -288,7 +289,6 @@ var I18N = {
     cScienceSub: "Enter symbol counts — points are computed",
     cGuild: "Guilds (purple)",
     cGuildSub: "Victory points",
-    coinsUnit: "coins",
     pts: "pts",
     symCompass: "Compass",
     symGear: "Gear",
@@ -307,10 +307,14 @@ var I18N = {
     appTitle: "Ancient Wonders Scorepad",
     compat: "Calcolatore di punteggio per 7 Wonders (gioco base)",
     playersLabel: "Giocatori",
+    addPlayer: "Aggiungi giocatore",
+    removePlayer: "Rimuovi giocatore",
+    theme: "Tema chiaro / scuro",
     newGame: "Nuova partita",
     total: "Totale",
     winner: "In testa",
     playerName: "Giocatore {n}",
+    flipSign: "Cambia segno",
     cMilitary: "Militare",
     cMilitarySub: "Token conflitto, totale (anche negativo)",
     cCoins: "Tesoro",
@@ -325,7 +329,6 @@ var I18N = {
     cScienceSub: "Inserisci i simboli — i punti sono calcolati",
     cGuild: "Gilde (viola)",
     cGuildSub: "Punti vittoria",
-    coinsUnit: "monete",
     pts: "pt",
     symCompass: "Compasso",
     symGear: "Ingranaggio",
@@ -360,299 +363,224 @@ function toggleTheme() {
   applyTheme();
 }
 
+/* ---------- categories: single source of truth, in display order ----------
+   key      → state field, CSS colour var (--c-<key>), i18n keys c<Key>/c<Key>Sub
+   signed   → may be negative (gets a ± button)
+   coins    → shows the derived points (floor(coins / 3)) next to the field
+   science  → symbol counts instead of a single value; points are computed    */
+var CATS = [
+  { key: "military",   i18n: "cMilitary",   signed: true },
+  { key: "coins",      i18n: "cCoins",      coins: true },
+  { key: "wonder",     i18n: "cWonder" },
+  { key: "civil",      i18n: "cCivil" },
+  { key: "commercial", i18n: "cCommercial" },
+  { key: "science",    i18n: "cScience",    science: true },
+  { key: "guild",      i18n: "cGuild" }
+];
+var CAT = {};
+CATS.forEach(function (c) { CAT[c.key] = c; });
+var POINT_KEYS = CATS.filter(function (c) { return !c.science; }).map(function (c) { return c.key; });
+var SCI = [
+  { key: "compass", sym: "📐", i18n: "symCompass" },
+  { key: "gear",    sym: "⚙️", i18n: "symGear" },
+  { key: "tablet",  sym: "📜", i18n: "symTablet" },
+  { key: "wild",    sym: "✦",  i18n: "symWild" }
+];
+var LIMIT = 999;   // sane bound for any single field
+
 /* ---------- state ---------- */
-function newPlayer() {
-  return { name: "", military: 0, coins: 0, wonder: 0, civil: 0, commercial: 0,
-           sci: { compass: 0, gear: 0, tablet: 0, wild: 0 }, guild: 0 };
+function toInt(v) { v = parseInt(v, 10); return isNaN(v) ? 0 : Math.max(-LIMIT, Math.min(LIMIT, v)); }
+/* First integer in free text; unsigned fields drop any minus ("-5" → 5). */
+function parseField(str, signed) {
+  var m = String(str).match(signed ? /-?\d+/ : /\d+/);
+  return m ? toInt(m[0]) : 0;
 }
-function defaultState() {
-  var p = [];
-  for (var i = 0; i < 4; i++) p.push(newPlayer());
-  return { players: p };
+function newPlayer() {
+  var p = { name: "", sci: {} };
+  POINT_KEYS.forEach(function (k) { p[k] = 0; });
+  SCI.forEach(function (s) { p.sci[s.key] = 0; });
+  return p;
 }
 function loadState() {
-  var raw = lsGet(STATE_KEY);
-  if (raw) {
-    try {
-      var s = JSON.parse(raw);
-      if (s && s.players && s.players.length >= 3 && s.players.length <= 7) {
-        // normalise each player against the schema
-        s.players = s.players.map(function (pl) {
-          var np = newPlayer();
-          np.name = typeof pl.name === "string" ? pl.name : "";
-          ["military", "coins", "wonder", "civil", "commercial", "guild"].forEach(function (k) {
-            np[k] = num(pl[k]);
-          });
-          if (pl.sci) ["compass", "gear", "tablet", "wild"].forEach(function (k) {
-            np.sci[k] = Math.max(0, num(pl.sci[k]));
-          });
-          return np;
-        });
-        return s;
-      }
-    } catch (e) {}
-  }
-  return defaultState();
+  try {
+    var s = JSON.parse(lsGet(STATE_KEY));
+    if (s && s.players && s.players.length >= 3 && s.players.length <= 7) {
+      return { players: s.players.map(function (raw) {     // normalise against the schema
+        var p = newPlayer();
+        p.name = typeof raw.name === "string" ? raw.name : "";
+        POINT_KEYS.forEach(function (k) { p[k] = toInt(raw[k]); if (!CAT[k].signed) p[k] = Math.max(0, p[k]); });
+        SCI.forEach(function (sy) { p.sci[sy.key] = Math.max(0, toInt(raw.sci && raw.sci[sy.key])); });
+        return p;
+      }) };
+    }
+  } catch (e) {}
+  return { players: [newPlayer(), newPlayer(), newPlayer(), newPlayer()] };
 }
-function saveState() { lsSet(STATE_KEY, JSON.stringify(state)); }
-
-function num(v) { v = parseInt(v, 10); return isNaN(v) ? 0 : v; }
-
 var state = loadState();
 
-/* ---------- scoring ---------- */
+/* Persistence: typing is debounced (one write per burst), structural changes
+   save at once, and a pending write is flushed when the page is hidden. */
+var saveTimer = null;
+function saveNow() { if (saveTimer !== null) { clearTimeout(saveTimer); saveTimer = null; } lsSet(STATE_KEY, JSON.stringify(state)); }
+function save() { if (saveTimer === null) saveTimer = setTimeout(saveNow, 150); }
+window.addEventListener("pagehide", function () { if (saveTimer !== null) saveNow(); });
+document.addEventListener("visibilitychange", function () { if (document.hidden && saveTimer !== null) saveNow(); });
+
+/* ---------- scoring (pure) ---------- */
 function coinPoints(coins) { return Math.floor(Math.max(0, coins) / 3); }
 
-// Science: each symbol count n -> n^2, plus 7 per complete set of 3 distinct.
-// Wild symbols are distributed to maximise the score (brute force).
+/* Science: each symbol count n → n², plus 7 per complete set of 3 distinct.
+   Wild symbols are distributed to maximise the score (exhaustive, O(wild²)). */
 function sciScore(c, g, t, wild) {
   c = Math.max(0, c); g = Math.max(0, g); t = Math.max(0, t); wild = Math.max(0, wild);
-  var best = -1;
+  var best = 0;
   for (var a = 0; a <= wild; a++) {
     for (var b = 0; a + b <= wild; b++) {
-      var d = wild - a - b;
-      var C = c + a, G = g + b, T = t + d;
+      var C = c + a, G = g + b, T = t + wild - a - b;
       var s = C * C + G * G + T * T + 7 * Math.min(C, G, T);
       if (s > best) best = s;
     }
   }
-  return best < 0 ? 0 : best;
+  return best;
 }
-function playerScience(p) { return sciScore(p.sci.compass, p.sci.gear, p.sci.tablet, p.sci.wild); }
-function playerTotal(p) {
-  return num(p.military) + coinPoints(p.coins) + num(p.wonder) + num(p.civil) +
-         num(p.commercial) + playerScience(p) + num(p.guild);
+function scorePlayer(p) {
+  var sci = sciScore(p.sci.compass, p.sci.gear, p.sci.tablet, p.sci.wild);
+  var coins = coinPoints(p.coins);
+  var total = sci;
+  POINT_KEYS.forEach(function (k) { total += k === "coins" ? coins : p[k]; });
+  return { total: total, sci: sci, coinPts: coins };
 }
-
-/* ---------- category definitions ---------- */
-var CATS = [
-  { key: "military",   color: "--c-military",   name: "cMilitary",   sub: "cMilitarySub",   signed: true },
-  { key: "coins",      color: "--c-coins",      name: "cCoins",      sub: "cCoinsSub",      coins: true },
-  { key: "wonder",     color: "--c-wonder",     name: "cWonder",     sub: "cWonderSub" },
-  { key: "civil",      color: "--c-civil",      name: "cCivil",      sub: "cCivilSub" },
-  { key: "commercial", color: "--c-commercial", name: "cCommercial", sub: "cCommercialSub" },
-  { key: "guild",      color: "--c-guild",      name: "cGuild",      sub: "cGuildSub" }
-];
+/* Ranking: total desc, then coins desc. Equal (total, coins) share a rank
+   (1, 1, 3 …). Leaders are all rank-1 players, unless nobody has scored yet. */
+function standings(players) {
+  var rows = players.map(function (p, i) {
+    var s = scorePlayer(p); s.i = i; s.coins = Math.max(0, p.coins); return s;
+  });
+  var sorted = rows.slice().sort(function (a, b) { return b.total - a.total || b.coins - a.coins; });
+  var scored = rows.some(function (r) { return r.total || r.coins; });
+  var rank = [], leader = [];
+  sorted.forEach(function (r, idx) {
+    var prev = sorted[idx - 1];
+    rank[r.i] = prev && prev.total === r.total && prev.coins === r.coins ? rank[prev.i] : idx + 1;
+    leader[r.i] = scored && rank[r.i] === 1;
+  });
+  return { rows: rows, rank: rank, leader: leader };
+}
 
 /* ---------- rendering ---------- */
 var elPlayers = document.getElementById("players");
 var elCount = document.getElementById("count");
+var views = [];   // per-card nodes that paint() updates, cached once per render()
 
+function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+function numInput(i, key, value, signed, label, sub) {
+  return '<input class="num" type="text" inputmode="numeric" pattern="' + (signed ? "-?[0-9]*" : "[0-9]*") +
+    '" value="' + value + '" data-i="' + i + '" data-k="' + key + '"' + (sub ? ' data-s="' + sub + '"' : "") +
+    ' aria-label="' + esc(label) + '">';
+}
+function catHTML(c, p, i) {
+  var head = '<div class="lab"><span class="dot" style="background:var(--c-' + c.key + ')"></span><div>' +
+    '<span class="name">' + t(c.i18n) + '</span><span class="sub">' + t(c.i18n + "Sub") + "</span></div></div>";
+  if (c.science) {
+    return '<div class="cat sci">' + head + '<div class="sci-inputs">' +
+      SCI.map(function (s) {
+        return '<label class="field"><span class="flab"><span class="sym">' + s.sym + "</span>" + t(s.i18n) + "</span>" +
+          numInput(i, "science", p.sci[s.key], false, t(c.i18n) + " — " + t(s.i18n), s.key) + "</label>";
+      }).join("") +
+      '</div><div class="sci-total"><span>' + t("sciTotal") + '</span><b data-v="sci"></b></div></div>';
+  }
+  return '<div class="cat">' + head + '<div class="right">' +
+    (c.signed ? '<button class="pm" data-neg="' + i + '" aria-label="' + t("flipSign") + '">±</button>' : "") +
+    numInput(i, c.key, p[c.key], c.signed, t(c.i18n)) +
+    (c.coins ? '<div class="pts" data-v="coins"></div>' : "") + "</div></div>";
+}
+function cardHTML(p, i) {
+  var pn = esc(t("playerName").replace("{n}", i + 1));
+  return '<div class="player"><div class="p-head"><div class="p-rank" data-v="rank"></div>' +
+    '<input class="p-name" type="text" data-i="' + i + '" data-k="name" value="' + esc(p.name) + '" placeholder="' + pn + '" aria-label="' + pn + '">' +
+    '<span class="win-tag" data-v="tag" hidden>★ ' + t("winner") + "</span>" +
+    '<div class="p-total"><div class="tot" data-v="total"></div><div class="lab">' + t("total") + "</div></div></div>" +
+    '<div class="cats">' + CATS.map(function (c) { return catHTML(c, p, i); }).join("") + "</div></div>";
+}
+
+/* Full render: static labels + all player cards. Used on start, language
+   change, player count change and reset. Typing only triggers paint(). */
 function render() {
   document.documentElement.lang = lang;
-  // static labels
-  document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
   document.title = t("appTitle");
-  document.querySelectorAll("#lang-toggle button").forEach(function (b) {
-    b.classList.toggle("on", b.getAttribute("data-lang") === lang);
-  });
+  $$("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
+  $$("[data-i18n-aria]").forEach(function (el) { el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"))); });
+  $$("[data-i18n-title]").forEach(function (el) { el.title = t(el.getAttribute("data-i18n-title")); });
+  $$("#lang-toggle button").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-lang") === lang); });
   elCount.textContent = state.players.length;
 
-  elPlayers.innerHTML = "";
-  state.players.forEach(function (p, i) {
-    elPlayers.appendChild(buildPlayerCard(p, i));
+  elPlayers.innerHTML = state.players.map(cardHTML).join("");
+  views = $$(".player", elPlayers).map(function (card) {
+    var v = { card: card };
+    $$("[data-v]", card).forEach(function (n) { v[n.getAttribute("data-v")] = n; });
+    return v;
   });
-  recompute();
+  paint();
 }
-
-function makeNum(value, signed) {
-  var inp = document.createElement("input");
-  inp.className = "num";
-  inp.type = "text";
-  inp.inputMode = signed ? "numeric" : "numeric";
-  inp.setAttribute("pattern", signed ? "-?[0-9]*" : "[0-9]*");
-  inp.value = String(value);
-  return inp;
-}
-
-function buildPlayerCard(p, i) {
-  var card = document.createElement("div");
-  card.className = "player";
-  card.setAttribute("data-i", i);
-
-  // header
-  var head = document.createElement("div"); head.className = "p-head";
-  var rank = document.createElement("div"); rank.className = "p-rank"; rank.textContent = "–";
-  var name = document.createElement("input");
-  name.className = "p-name"; name.type = "text"; name.value = p.name;
-  name.placeholder = t("playerName").replace("{n}", i + 1);
-  name.setAttribute("aria-label", t("playerName").replace("{n}", i + 1));
-  name.addEventListener("input", function () { p.name = name.value; saveState(); });
-
-  var tot = document.createElement("div"); tot.className = "p-total";
-  var totNum = document.createElement("div"); totNum.className = "num"; totNum.textContent = "0";
-  var totLab = document.createElement("div"); totLab.className = "lab"; totLab.textContent = t("total");
-  tot.appendChild(totNum); tot.appendChild(totLab);
-
-  head.appendChild(rank); head.appendChild(name); head.appendChild(tot);
-  card.appendChild(head);
-
-  // categories
-  var cats = document.createElement("div"); cats.className = "cats";
-
-  // military first, then coins, then wonder/civil/commercial, then science, then guild.
-  // We render in a readable order: military, coins, wonder, civil, commercial, science, guild.
-  var order = ["military", "coins", "wonder", "civil", "commercial"];
-  order.forEach(function (key) {
-    var def = findCat(key);
-    cats.appendChild(buildSimpleCat(p, def));
-  });
-  cats.appendChild(buildScienceCat(p));
-  cats.appendChild(buildSimpleCat(p, findCat("guild")));
-
-  card.appendChild(cats);
-  return card;
-}
-
-function findCat(key) { for (var i = 0; i < CATS.length; i++) if (CATS[i].key === key) return CATS[i]; }
-
-function buildSimpleCat(p, def) {
-  var row = document.createElement("div"); row.className = "cat";
-  var lab = document.createElement("div"); lab.className = "lab";
-  var dot = document.createElement("span"); dot.className = "dot"; dot.style.background = "var(" + def.color + ")";
-  var txt = document.createElement("div");
-  var nm = document.createElement("span"); nm.className = "name"; nm.textContent = t(def.name);
-  var sb = document.createElement("span"); sb.className = "sub"; sb.textContent = t(def.sub);
-  txt.appendChild(nm); txt.appendChild(sb);
-  lab.appendChild(dot); lab.appendChild(txt);
-
-  var right = document.createElement("div"); right.className = "right";
-  var inp = makeNum(p[def.key], def.signed);
-  inp.setAttribute("aria-label", t(def.name));
-  right.appendChild(inp);
-
-  if (def.coins) {
-    var pts = document.createElement("div"); pts.className = "pts";
-    pts.setAttribute("data-coinpts", "1");
-    right.appendChild(pts);
-  }
-
-  inp.addEventListener("input", function () {
-    var v = def.signed ? parseInt(inp.value.replace(/[^0-9-]/g, ""), 10)
-                       : parseInt(inp.value.replace(/[^0-9]/g, ""), 10);
-    p[def.key] = isNaN(v) ? 0 : v;
-    saveState();
-    recompute();
-  });
-
-  row.appendChild(lab); row.appendChild(right);
-  return row;
-}
-
-function buildScienceCat(p) {
-  var row = document.createElement("div"); row.className = "cat sci";
-  var lab = document.createElement("div"); lab.className = "lab";
-  var dot = document.createElement("span"); dot.className = "dot"; dot.style.background = "var(--c-science)";
-  var txt = document.createElement("div");
-  var nm = document.createElement("span"); nm.className = "name"; nm.textContent = t("cScience");
-  var sb = document.createElement("span"); sb.className = "sub"; sb.textContent = t("cScienceSub");
-  txt.appendChild(nm); txt.appendChild(sb);
-  lab.appendChild(dot); lab.appendChild(txt);
-  row.appendChild(lab);
-
-  var inputs = document.createElement("div"); inputs.className = "sci-inputs";
-  var syms = [
-    { k: "compass", sym: "📐", lab: "symCompass" },
-    { k: "gear", sym: "⚙️", lab: "symGear" },
-    { k: "tablet", sym: "📜", lab: "symTablet" },
-    { k: "wild", sym: "✦", lab: "symWild" }
-  ];
-  syms.forEach(function (s) {
-    var f = document.createElement("div"); f.className = "field";
-    var fl = document.createElement("div"); fl.className = "flab";
-    var sy = document.createElement("span"); sy.className = "sym"; sy.textContent = s.sym;
-    var tx = document.createElement("span"); tx.textContent = t(s.lab);
-    fl.appendChild(sy); fl.appendChild(tx);
-    var inp = makeNum(p.sci[s.k], false);
-    inp.setAttribute("aria-label", t("cScience") + " — " + t(s.lab));
-    inp.addEventListener("input", function () {
-      var v = parseInt(inp.value.replace(/[^0-9]/g, ""), 10);
-      p.sci[s.k] = isNaN(v) ? 0 : Math.max(0, v);
-      saveState();
-      recompute();
-    });
-    f.appendChild(fl); f.appendChild(inp);
-    inputs.appendChild(f);
-  });
-  row.appendChild(inputs);
-
-  var scit = document.createElement("div"); scit.className = "sci-total";
-  var scilab = document.createElement("span"); scilab.textContent = t("sciTotal");
-  var scival = document.createElement("b"); scival.setAttribute("data-scipts", "1"); scival.textContent = "0";
-  scit.appendChild(scilab); scit.appendChild(scival);
-  row.appendChild(scit);
-  return row;
-}
-
-/* ---------- recompute totals, coins points, science points, ranking ---------- */
-function recompute() {
-  var cards = elPlayers.querySelectorAll(".player");
-  var totals = [];
-  cards.forEach(function (card, i) {
-    var p = state.players[i];
-    var total = playerTotal(p);
-    totals.push({ i: i, total: total, coins: Math.max(0, num(p.coins)) });
-    card.querySelector(".p-total .num").textContent = total;
-    var cp = card.querySelector("[data-coinpts]");
-    if (cp) cp.innerHTML = coinPoints(p.coins) + ' <span class="u">' + t("pts") + "</span>";
-    var sp = card.querySelector("[data-scipts]");
-    if (sp) sp.textContent = playerScience(p);
-  });
-
-  // ranking: total desc, coins desc
-  var ranked = totals.slice().sort(function (a, b) {
-    if (b.total !== a.total) return b.total - a.total;
-    return b.coins - a.coins;
-  });
-  // leader = top of ranking if any player has a non-zero score, else none
-  var anyScore = ranked.some(function (r) { return r.total !== 0 || r.coins !== 0; });
-  var rankOf = {};
-  ranked.forEach(function (r, idx) { rankOf[r.i] = idx + 1; });
-
-  // a leader is tied only if another has identical total AND coins
-  var top = ranked[0];
-  cards.forEach(function (card, i) {
-    var r = rankOf[i];
-    card.querySelector(".p-rank").textContent = r;
-    var isLeader = anyScore && top &&
-      totals[i].total === top.total && totals[i].coins === top.coins;
-    card.classList.toggle("win", !!isLeader);
-    var nameEl = card.querySelector(".p-name");
-    var head = card.querySelector(".p-head");
-    var tag = head.querySelector(".win-tag");
-    if (isLeader) {
-      if (!tag) {
-        tag = document.createElement("span"); tag.className = "win-tag";
-        nameEl.insertAdjacentElement("afterend", tag);
-      }
-      tag.textContent = "★ " + t("winner");
-    } else if (tag) {
-      tag.remove();
-    }
+/* Cheap update of the derived numbers only (totals, coin/science points, ranks, leader). */
+function paint() {
+  var st = standings(state.players);
+  views.forEach(function (v, i) {
+    var r = st.rows[i];
+    v.total.textContent = r.total;
+    v.coins.innerHTML = r.coinPts + ' <span class="u">' + t("pts") + "</span>";
+    v.sci.textContent = r.sci;
+    v.rank.textContent = st.rank[i];
+    v.card.classList.toggle("win", st.leader[i]);
+    v.tag.hidden = !st.leader[i];
   });
 }
 
-/* ---------- player count ---------- */
+/* ---------- player count / reset ---------- */
 function setCount(n) {
   n = Math.max(3, Math.min(7, n));
   while (state.players.length < n) state.players.push(newPlayer());
   while (state.players.length > n) state.players.pop();
-  saveState();
-  render();
+  saveNow(); render();
+}
+function doReset() {
+  state.players = state.players.map(newPlayer);   // keep the player count, clear everything else
+  saveNow(); render();
 }
 
-/* ---------- wiring ---------- */
+/* ---------- wiring (delegated: 3 listeners for all cards) ---------- */
+elPlayers.addEventListener("input", function (e) {
+  var el = e.target, p = state.players[el.getAttribute("data-i")], k = el.getAttribute("data-k");
+  if (!p || !k) return;
+  if (k === "name") { p.name = el.value; save(); return; }
+  var v = parseField(el.value, !!CAT[k].signed);
+  if (k === "science") p.sci[el.getAttribute("data-s")] = v; else p[k] = v;
+  save(); paint();
+});
+elPlayers.addEventListener("change", function (e) {   // on blur, show what was actually stored
+  var el = e.target, p = state.players[el.getAttribute("data-i")], k = el.getAttribute("data-k");
+  if (!p || !k || k === "name") return;
+  el.value = k === "science" ? p.sci[el.getAttribute("data-s")] : p[k];
+});
+elPlayers.addEventListener("focusin", function (e) {   // tap a field → select it, so typing replaces the 0
+  if (e.target.classList.contains("num")) e.target.select();
+});
+elPlayers.addEventListener("click", function (e) {
+  var b = e.target.closest("[data-neg]");
+  if (!b) return;
+  var p = state.players[b.getAttribute("data-neg")];
+  p.military = -p.military;
+  b.parentNode.querySelector(".num").value = p.military;
+  save(); paint();
+});
+
 document.getElementById("plus").addEventListener("click", function () { setCount(state.players.length + 1); });
 document.getElementById("minus").addEventListener("click", function () { setCount(state.players.length - 1); });
-
 document.getElementById("theme-btn").addEventListener("click", toggleTheme);
-
-document.querySelectorAll("#lang-toggle button").forEach(function (b) {
-  b.addEventListener("click", function () {
-    lang = b.getAttribute("data-lang");
-    lsSet(LANG_KEY, lang);
-    render();
-  });
+$$("#lang-toggle button").forEach(function (b) {
+  b.addEventListener("click", function () { lang = b.getAttribute("data-lang"); lsSet(LANG_KEY, lang); render(); });
 });
 
 var dlg = document.getElementById("confirm");
@@ -662,17 +590,13 @@ document.getElementById("reset").addEventListener("click", function () {
 });
 document.getElementById("confirm-no").addEventListener("click", function () { dlg.close(); });
 document.getElementById("confirm-yes").addEventListener("click", function () { dlg.close(); doReset(); });
-function doReset() {
-  var n = state.players.length;
-  state = defaultState();
-  setCount(n); // keep current player count, clear everything else
-}
 
 applyTheme();
 render();
+document.getElementById("ver").textContent = "v" + APP_VERSION + " · " + APP_DATE;
 
-var ver = document.getElementById("ver");
-if (ver) ver.textContent = "v" + APP_VERSION + " · " + APP_DATE;
+/* Pure scoring API, exposed for quick checks from the console / tests. */
+window.AWS = { version: APP_VERSION, sciScore: sciScore, coinPoints: coinPoints, scorePlayer: scorePlayer, standings: standings };
 </script>
 </body>
 </html>
